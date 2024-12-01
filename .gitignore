@@ -1,0 +1,11 @@
+# Python
+*.egg-info
+.mypy_cache
+__pycache__
+build
+
+# VS Code
+.vscode
+
+# macOS
+.DS_Store
