@@ -131,8 +131,8 @@ class FineTuneArgs(TypedDict):
     type=click.Choice(["sigma_sqrt", "logit_normal", "mode", "cosmap"]),
     default="logit_normal",
 )
-@click.option("--logit_mean", default=0.0)
-@click.option("--logit_std", default=1.0)
+@click.option("--logit-mean", default=0.0)
+@click.option("--logit-std", default=1.0)
 @click.option("--mode-scale", default=1.29)
 @click.option("--max-grad-norm", default=1.0)
 @click.option(
@@ -369,7 +369,7 @@ class FineTune:
         """Perform a single training step."""
 
         with (
-            torch.amp.autocast(device_type=self.device.type, dtype=self.weight_dtype)
+            torch.amp.autocast(device_type=self.device.type)
             if self.args["amp"]
             else contextlib.nullcontext()
         ):
