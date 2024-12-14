@@ -99,6 +99,59 @@ class ImageDataset(torch.utils.data.Dataset):
         return batch
 
 
+def load_prompt_embeds(
+    prompt_dir: Path, variant: str | None, dtype: torch.dtype
+) -> tuple[torch.Tensor, torch.Tensor]:
+    """Loads the prompt embeddings from a directory of safetensors files.
+
+    Args:
+        prompt_dir: The directory containing the prompt embeddings.
+        variant: The variant of the prompt to load, or `None` to choose randomly.
+        dtype: The data type to convert the prompt embeddings to.
+
+    Returns:
+        A tuple containing the prompt embeddings and pooled prompt embeddings.
+    """
+
+    def load_file(file_path: Path) -> tuple[torch.Tensor, torch.Tensor | None]:
+        nonlocal variant  # Modify variant in the outer scope if it is `None`.
+
+        with safe_open(file_path, framework="pt") as file:
+            if variant is None:
+                variants = set(key.split(".")[0] for key in file.keys())
+                variant = random.choice(list(variants))
+
+            prompt_embeds = file.get_tensor(f"{variant}.prompt_embeds").to(dtype)
+
+            pooled_key = f"{variant}.pooled_prompt_embeds"
+            if pooled_key in file.keys():
+                pooled_prompt_embeds = file.get_tensor(pooled_key).to(dtype)
+            else:
+                pooled_prompt_embeds = None
+
+        return prompt_embeds, pooled_prompt_embeds
+
+    prompt_embeds_1, pooled_prompt_embeds_1 = load_file(
+        prompt_dir / "prompt_embeds_1.safetensors"
+    )
+    prompt_embeds_2, pooled_prompt_embeds_2 = load_file(
+        prompt_dir / "prompt_embeds_2.safetensors"
+    )
+    t5_prompt_embeds, _ = load_file(prompt_dir / "prompt_embeds_3.safetensors")
+
+    clip_prompt_embeds = torch.cat((prompt_embeds_1, prompt_embeds_2), dim=-1)
+    pooled_prompt_embeds = torch.cat(
+        (pooled_prompt_embeds_1, pooled_prompt_embeds_2), dim=-1
+    )
+    clip_prompt_embeds = torch.nn.functional.pad(
+        clip_prompt_embeds,
+        (0, t5_prompt_embeds.size(-1) - clip_prompt_embeds.size(-1)),
+    )
+    prompt_embeds = torch.cat((clip_prompt_embeds, t5_prompt_embeds), dim=-2)
+
+    return prompt_embeds, pooled_prompt_embeds
+
+
 class ImageAndPromptDataset(torch.utils.data.Dataset):
     """Dataset for loading latents of images and text embeddings of prompts."""
 
@@ -134,25 +187,9 @@ class ImageAndPromptDataset(torch.utils.data.Dataset):
             example_dir / "latent_dist.safetensors"
         )
         prompt_dir = self.empty_prompt_dir if random.random() < 0.2 else example_dir
-        variant, prompt_embeds_1, pooled_prompt_embeds_1 = self.load_prompt_embed_file(
-            prompt_dir / "prompt_embeds_1.safetensors", variant=None
+        prompt_embeds, pooled_prompt_embeds = load_prompt_embeds(
+            prompt_dir, None, self.dtype
         )
-        _, prompt_embeds_2, pooled_prompt_embeds_2 = self.load_prompt_embed_file(
-            prompt_dir / "prompt_embeds_2.safetensors", variant=variant
-        )
-        _, t5_prompt_embeds, _ = self.load_prompt_embed_file(
-            prompt_dir / "prompt_embeds_3.safetensors", variant=variant
-        )
-
-        clip_prompt_embeds = torch.cat((prompt_embeds_1, prompt_embeds_2), dim=-1)
-        pooled_prompt_embeds = torch.cat(
-            (pooled_prompt_embeds_1, pooled_prompt_embeds_2), dim=-1
-        )
-        clip_prompt_embeds = torch.nn.functional.pad(
-            clip_prompt_embeds,
-            (0, t5_prompt_embeds.size(-1) - clip_prompt_embeds.size(-1)),
-        )
-        prompt_embeds = torch.cat((clip_prompt_embeds, t5_prompt_embeds), dim=-2)
 
         return {
             "model_input": model_input,
@@ -172,26 +209,6 @@ class ImageAndPromptDataset(torch.utils.data.Dataset):
         )
         model_input = ((model_input - shift_factor) * scaling_factor).to(self.dtype)
         return model_input
-
-    def load_prompt_embed_file(
-        self, file_path: Path, variant: str | None
-    ) -> tuple[str, torch.Tensor, torch.Tensor | None]:
-        """Load the prompt embeddings from a file."""
-
-        with safe_open(file_path, framework="pt") as file:
-            if variant is None:
-                variants = set(key.split(".")[0] for key in file.keys())
-                variant = random.choice(list(variants))
-
-            prompt_embeds = file.get_tensor(f"{variant}.prompt_embeds").to(self.dtype)
-
-            pooled_key = f"{variant}.pooled_prompt_embeds"
-            if pooled_key in file.keys():
-                pooled_prompt_embeds = file.get_tensor(pooled_key).to(self.dtype)
-            else:
-                pooled_prompt_embeds = None
-
-        return variant, prompt_embeds, pooled_prompt_embeds
 
     def get_sampling_weights(self) -> list[float]:
         """Compute the sampling weights to balance attribute frequencies."""

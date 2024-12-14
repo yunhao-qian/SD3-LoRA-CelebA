@@ -1,8 +1,8 @@
 """Utility classes for visualizing the Stable Diffusion 3 model."""
 
-from pathlib import Path
 import itertools
 from collections.abc import Generator, Iterable
+from pathlib import Path
 from typing import Literal, NamedTuple
 
 import numpy as np
