@@ -14,6 +14,7 @@ from .fine_tune import fine_tune
 from .generate_images import generate_images
 from .prepare_celeba import prepare_celeba
 from .prepare_celeba_hq import prepare_celeba_hq
+from .visualize_attention_weights import visualize_attention_weights
 
 
 @click.group()
@@ -38,3 +39,4 @@ sd3.add_command(compute_prompt_embeds)
 sd3.add_command(fine_tune)
 sd3.add_command(copy_images)
 sd3.add_command(generate_images)
+sd3.add_command(visualize_attention_weights)

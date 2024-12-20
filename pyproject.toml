@@ -5,7 +5,29 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "sd3-lora-celeba"
 version = "2024.0.0"
-dependencies = []
+dependencies = [
+    "accelerate",
+    "click",
+    "cvxpy",
+    "diffusers",
+    "gradio",
+    "matplotlib",
+    "more-itertools",
+    "ncut-pytorch",
+    "numpy",
+    "peft",
+    "pillow",
+    "rich",
+    "safetensors",
+    "scikit-learn",
+    "sentencepiece",
+    "torch",
+    "torchvision",
+    "tqdm",
+    "transformers",
+    "typing-extensions",
+    "wandb",
+]
 requires-python = ">= 3.10"
 authors = [{ name = "Yunhao Qian", email = "yunhaoq@seas.upenn.edu" }]
 description = "Fine-tuning a Stable Diffusion 3 model using LoRA on the CelebA and CelebA-HQ datasets."
@@ -22,6 +44,9 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
 ]
+
+[project.optional-dependencies]
+dev = ["black", "isort", "jupyter", "pylint"]
 
 [project.urls]
 Repository = "https://github.com/yunhao-qian/sd3-lora-celeba"
