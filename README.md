@@ -10,7 +10,7 @@ pip install /path/to/sd3-lora-celeba
 
 This will automatically install all dependencies, but you may prefer to install them manually to ensure compatibility with your system. Refer to [`pyproject.toml`](./pyproject.toml) for the complete list of dependencies.
 
-To compute FID scores, you will need to install the additional [`pytorch-fid` package](https://github.com/mseitzer/pytorch-fid):
+To calculate FID scores, you will need to install the additional [`pytorch-fid` package](https://github.com/mseitzer/pytorch-fid):
 
 ```bash
 pip install pytorch-fid
@@ -34,7 +34,7 @@ We augment the dataset with additional images from the [CelebA dataset](https://
 sd3 prepare-celeba /path/to/CelebA /path/to/CelebAMask-HQ /path/to/dataset
 ```
 
-### Generate Image Captions
+### Caption the Images
 
 First, caption the images using BLIP-2.
 
@@ -78,6 +78,8 @@ sd3 compute-prompt-embeds 2 /path/to/dataset/empty-prompt
 sd3 compute-prompt-embeds 3 /path/to/dataset/empty-prompt
 ```
 
+You may need to log in to Hugging Face and request access to the Stable Diffusion 3 model.
+
 ### Fine-Tune the Model
 
 Fine-tune the model on the prepared dataset using the following command, which includes the best hyperparameters identified so far:
@@ -100,7 +102,7 @@ sd3 fine-tune /path/to/dataset/train /path/to/dataset/empty-prompt \
 
 The program may prompt you to log in to W&B for logging if you have not already done so.
 
-### Compute FID Scores
+### Calculate FID Scores
 
 First, copy the ground-truth images from the test set to a new directory:
 

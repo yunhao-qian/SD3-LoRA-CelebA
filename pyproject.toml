@@ -30,7 +30,7 @@ dependencies = [
 ]
 requires-python = ">= 3.10"
 authors = [{ name = "Yunhao Qian", email = "yunhaoq@seas.upenn.edu" }]
-description = "Fine-tuning a Stable Diffusion 3 model using LoRA on the CelebA and CelebA-HQ datasets."
+description = "Stable Diffusion 3 fine-tuning and feature visualization."
 readme = "README.md"
 keywords = ["Stable Diffusion", "LoRA", "CelebA", "CelebA-HQ"]
 classifiers = [
