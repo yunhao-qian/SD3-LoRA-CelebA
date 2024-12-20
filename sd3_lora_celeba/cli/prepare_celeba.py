@@ -45,11 +45,28 @@ class PrepareCelebAArgs(TypedDict):
         exists=False, file_okay=False, dir_okay=True, writable=True, path_type=Path
     ),
 )
-@click.option("--min-image-size", type=int, default=768)
-@click.option("--num-workers", type=int, default=1)
+@click.option(
+    "--min-image-size",
+    type=int,
+    default=768,
+    help="minimum image size to keep an CelebA image",
+)
+@click.option(
+    "--num-workers",
+    type=int,
+    default=1,
+    help="number of workers for processing examples",
+)
 def prepare_celeba(**kwargs: PrepareCelebAArgs) -> None:
     """Prepare examples in the CelebA dataset that are not in CelebA-HQ and have
-    sufficient image resolution."""
+    sufficient image resolution.
+
+    CELEBA_DIR is the directory containing the CelebA dataset.
+
+    CELEBA_MASK_HQ_DIR is the directory containing the CelebA-HQ dataset.
+
+    OUTPUT_DIR is the directory to write the prepared dataset to.
+    """
 
     _logger.info("Arguments to prepare-celeba: %s", kwargs)
     PrepareCelebA(kwargs).run()
@@ -65,7 +82,7 @@ class PrepareCelebA:
         self.bbox_data: dict[str, tuple[int, int, int, int]] | None = None
 
     def run(self) -> None:
-        """Run the subcommand."""
+        """Runs the subcommand."""
 
         self.args["output_dir"].mkdir(exist_ok=True)
 
@@ -96,7 +113,7 @@ class PrepareCelebA:
         )
 
     def read_attribute_file(self) -> None:
-        """Read the attribute file."""
+        """Reads the attribute file."""
 
         attribute_file_path = self.args["celeba_dir"] / "Anno/list_attr_celeba.txt"
         _logger.info("Reading attribute file: %s", attribute_file_path)
@@ -105,7 +122,8 @@ class PrepareCelebA:
             self.attribute_data = read_attribute_file(file)
 
     def read_mapping_file(self) -> list[str]:
-        """From the mapping file, read the filenames in CelebA that are in CelebA-HQ."""
+        """From the mapping file, reads the filenames in CelebA that are in
+        CelebA-HQ."""
 
         mapping_file_path = (
             self.args["celeba_mask_hq_dir"] / "CelebA-HQ-to-CelebA-mapping.txt"
@@ -124,7 +142,7 @@ class PrepareCelebA:
         return filenames
 
     def remove_examples_by_filename(self, filenames_to_remove: list[str]) -> None:
-        """Remove examples from `attribute_data` that are in CelebA-HQ."""
+        """Removes examples from `attribute_data` that are in CelebA-HQ."""
 
         old_num_examples = len(self.attribute_data["image_filenames"])
 
@@ -154,7 +172,7 @@ class PrepareCelebA:
         )
 
     def read_bbox_file(self) -> None:
-        """Read the file of face bounding boxes."""
+        """Reads the file of face bounding boxes."""
 
         bbox_file_path = self.args["celeba_dir"] / "Anno/list_bbox_celeba.txt"
         _logger.info("Reading bounding box file: %s", bbox_file_path)
@@ -173,7 +191,7 @@ class PrepareCelebA:
         assert len(self.bbox_data) == num_examples
 
     def process_example(self, example_index: int) -> bool:
-        """Process an example, and if it passes the criteria, write it to the output
+        """Processes an example, and if it passes the criteria, writes it to the output
         directory."""
 
         input_image_filename = self.attribute_data["image_filenames"][example_index]
@@ -219,7 +237,7 @@ class PrepareCelebA:
     def compute_crop_box(
         image_size: tuple[int, int], bbox: tuple[int, int, int, int]
     ) -> tuple[int, int, int, int]:
-        """Crop the image, centered around the face if possible."""
+        """Crops the image, centered around the face if possible."""
 
         image_width, image_height = image_size
         bbox_x1, bbox_y1, bbox_width, bbox_height = bbox
@@ -241,13 +259,13 @@ _worker_context: PrepareCelebA | None = None
 
 
 def _initialize_worker(context: PrepareCelebA) -> None:
-    """Initialize the worker process."""
+    """Initializes the worker process."""
 
     global _worker_context
     _worker_context = context
 
 
 def _process_example(example_index: int) -> bool:
-    """Process an example in the worker process."""
+    """Processes an example in the worker process."""
 
     return _worker_context.process_example(example_index)

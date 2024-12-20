@@ -32,9 +32,16 @@ class CopyImagesArgs(TypedDict):
         exists=False, file_okay=False, dir_okay=True, writable=True, path_type=Path
     ),
 )
-@click.option("--symlink/--no-symlink", default=False)
+@click.option(
+    "--symlink/--no-symlink", default=False, help="create symlinks instead of copying"
+)
 def copy_images(**kwargs: CopyImagesArgs) -> None:
-    """Copy images from one directory to another."""
+    """Copy images from one directory to another.
+
+    DATASET_DIR is the source directory containing the images to copy.
+
+    OUTPUT_DIR is the destination directory to copy the images to.
+    """
 
     _logger.info("Arguments to copy-images: %s", kwargs)
     CopyImages(kwargs).run()
@@ -47,7 +54,7 @@ class CopyImages:
         self.args = args
 
     def run(self) -> None:
-        """Run the subcommand."""
+        """Runs the subcommand."""
 
         self.args["output_dir"].mkdir(exist_ok=True)
 
@@ -64,7 +71,7 @@ class CopyImages:
             self.copy_image(example_dir)
 
     def copy_image(self, example_dir: Path) -> None:
-        """Copy an image from the example directory."""
+        """Copies an image from the example directory."""
 
         input_image_path = (
             example_dir

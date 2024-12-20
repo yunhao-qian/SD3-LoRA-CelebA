@@ -18,15 +18,20 @@ from .visualize_attention_weights import visualize_attention_weights
 
 
 @click.group()
-@click.option("--quiet", is_flag=True)
-def sd3(quiet: bool) -> None:
+@click.option("--quiet", is_flag=True, help="suppress non-warning log messages")
+@click.option(
+    "--logging-style",
+    type=click.Choice(["rich", "plain"]),
+    default="rich",
+    help="use rich text or plain text for logging",
+)
+def sd3(quiet: bool, logging_style: str) -> None:
     """Command line tool for fine-tuning a Stable Diffusion 3 model."""
-
     logging.basicConfig(
         format="%(message)s",
         datefmt="[%X]",
         level=logging.WARNING if quiet else logging.INFO,
-        handlers=[RichHandler()],
+        **({"handlers": [RichHandler()]} if logging_style == "rich" else {}),
     )
 
 

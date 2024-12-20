@@ -30,14 +30,21 @@ class VisualizeAttentionWeightArgs(TypedDict):
 
 
 @click.command()
-@click.option("--model-name", default="stabilityai/stable-diffusion-3-medium-diffusers")
-@click.option("--model-revision", default="main")
+@click.option(
+    "--model-name",
+    default="stabilityai/stable-diffusion-3-medium-diffusers",
+    help="Stable Diffusion 3 model name",
+)
+@click.option(
+    "--model-revision", default="main", help="Stable Diffusion 3 model revision"
+)
 @click.option(
     "--lora-weight-dir",
     type=click.Path(exists=True, file_okay=False, dir_okay=True, readable=True),
     multiple=True,
+    help="zero, one, or more directories containing LoRA weights",
 )
-@click.option("--share/--no-share", default=False)
+@click.option("--share/--no-share", default=False, help="share the Gradio app")
 def visualize_attention_weights(**kwargs: VisualizeAttentionWeightArgs) -> None:
     """Gradio app to visualize attention weights."""
 
@@ -61,7 +68,7 @@ class VisualizeAttentionWeight:
         self.attention_weight: np.ndarray | None = None
 
     def run(self) -> None:
-        """Run the subcommand."""
+        """Runs the subcommand."""
 
         _logger.info(
             "Loading model '%s', revision '%s'",
@@ -147,6 +154,7 @@ class VisualizeAttentionWeight:
 
             # Update the inference step to visualize based on the number of inference
             # steps.
+            # pylint: disable-next=no-member
             num_inference_steps_input.change(
                 lambda value, num_inference_steps: gr.update(
                     value=min(value, num_inference_steps - 1),
@@ -157,12 +165,14 @@ class VisualizeAttentionWeight:
             )
 
             # `num_eigenvectors` is applicable only to the NCUT mode.
+            # pylint: disable-next=no-member
             visualization_mode_input.change(
                 lambda value: gr.update(visible=value == "NCUT"),
                 inputs=[visualization_mode_input],
                 outputs=num_eigenvectors_input,
             )
 
+            # pylint: disable-next=no-member
             run_button.click(
                 self.on_run_button_click,
                 inputs=[
@@ -179,6 +189,7 @@ class VisualizeAttentionWeight:
                 outputs=figure_output,
             )
 
+            # pylint: disable-next=no-member
             figure_output.select(
                 self.on_figure_output_select,
                 inputs=[figure_output],
@@ -294,7 +305,7 @@ class VisualizeAttentionWeight:
         transformer_blocks: Collection[int],
         pipeline_args: dict[str, Any],
     ) -> None:
-        """Get the generated image and the attention weight at the specified inference
+        """Gets the generated image and the attention weight at the specified inference
         step and transformer blocks."""
 
         original_joint_attn_processor_call = JointAttnProcessor2_0.__call__
@@ -346,7 +357,7 @@ class VisualizeAttentionWeight:
         JointAttnProcessor2_0.__call__ = original_joint_attn_processor_call
 
     def get_text_tokens(self, prompt: str) -> tuple[dict[int, str], dict[int, str]]:
-        """Get the mappings from CLIP/T5 token indices to the string representations of
+        """Gets the mappings from CLIP/T5 token indices to the string representations of
         those tokens."""
 
         clip_token_ids = self.pipeline.tokenizer(
@@ -355,13 +366,12 @@ class VisualizeAttentionWeight:
             max_length=77,
             truncation=True,
         )["input_ids"]
-        self.clip_tokens = {
-            token_index: token_str
-            for token_index, token_str in enumerate(
+        self.clip_tokens = dict(
+            enumerate(
                 self.pipeline.tokenizer.convert_ids_to_tokens(clip_token_ids),
                 start=4096,
             )
-        }
+        )
 
         t5_token_ids = self.pipeline.tokenizer_3(
             prompt,
@@ -370,22 +380,21 @@ class VisualizeAttentionWeight:
             truncation=True,
             add_special_tokens=True,
         )["input_ids"]
-        self.t5_tokens = {
-            token_index: token_str
-            for token_index, token_str in enumerate(
+        self.t5_tokens = dict(
+            enumerate(
                 self.pipeline.tokenizer_3.convert_ids_to_tokens(t5_token_ids),
                 start=4096 + 77,
             )
-        }
+        )
 
     @staticmethod
     def attention_weight_to_heatmap(weight: np.ndarray, kind: str) -> np.ndarray:
-        """Convert the attention weight to a heatmap."""
+        """Converts the attention weight to a heatmap."""
 
         weight_min = weight.min()
         weight_max = weight.max()
         weight = ((weight - weight_min) / (weight_max - weight_min + 1e-6)).clip(0, 1)
-        heatmap = plt.cm.plasma(weight)
+        heatmap = plt.get_cmap("plasma")(weight)
         if kind == "image":
             heatmap[:, 3] = weight * 0.6 + 0.4  # alpha in [0.6, 1.0]
         return (heatmap * 255).astype(np.uint8)
@@ -393,7 +402,7 @@ class VisualizeAttentionWeight:
     def apply_ncut_colors(
         self, num_eigenvectors: int
     ) -> tuple[np.ndarray, np.ndarray, Image.Image]:
-        """Apply NCUT colors to the text tokens and the image."""
+        """Applies NCUT colors to the text tokens and the image."""
 
         attention_weight = torch.from_numpy(self.attention_weight).to(
             self.pipeline.device
@@ -435,7 +444,7 @@ class VisualizeAttentionWeight:
         return clip_token_colors, t5_token_colors, image_to_display
 
     def apply_overlay(self, overlay: np.ndarray) -> Image.Image:
-        """Alpha composite the overlay on the generated image."""
+        """Alpha composites the overlay on the generated image."""
 
         assert self.generated_image.size == (1024, 1024)
         assert overlay.shape == (64, 64, 4)
@@ -521,6 +530,7 @@ def _joint_attn_processor_call(
             # (24, 4429, 4429) -> (4429, 4429)
             self.saved_attention_weight = attn_weight.mean(dim=0).cpu()
 
+    # pylint: disable=not-callable
     hidden_states = torch.nn.functional.scaled_dot_product_attention(
         query, key, value, dropout_p=0.0, is_causal=False
     )
@@ -545,5 +555,4 @@ def _joint_attn_processor_call(
 
     if encoder_hidden_states is not None:
         return hidden_states, encoder_hidden_states
-    else:
-        return hidden_states
+    return hidden_states

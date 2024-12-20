@@ -80,34 +80,62 @@ class FineTuneArgs(TypedDict):
         exists=True, file_okay=False, dir_okay=True, readable=True, path_type=Path
     ),
 )
-@click.option("--model-name", default="stabilityai/stable-diffusion-3-medium-diffusers")
-@click.option("--model-revision", default="main")
+@click.option(
+    "--model-name",
+    default="stabilityai/stable-diffusion-3-medium-diffusers",
+    help="Stable Diffusion 3 model name",
+)
+@click.option(
+    "--model-revision", default="main", help="Stable Diffusion 3 model revision"
+)
 @click.option(
     "--precision",
     type=click.Choice(["float32", "float16", "bfloat16"]),
     default="float32",
+    help="data type to run the model in",
 )
 @click.option(
     "--float32-matmul-precision",
     type=click.Choice(["highest", "high", "medium"]),
     default="highest",
+    help="precision for float32 matmul",
 )
-@click.option("--amp/--no-amp", default=False)
-@click.option("--device", default=None)
-@click.option("--compile-model/--no-compile-model", default=False)
-@click.option("--lora-layers", default=None)
-@click.option("--lora-blocks", default=None)
-@click.option("--lora-rank", default=64)
-@click.option("--lora-alpha", type=int, default=None)
-@click.option("--learning-rate", default=1e-4)
-@click.option("--adam-beta1", default=0.9)
-@click.option("--adam-beta2", default=0.999)
-@click.option("--adam-weight-decay", default=1e-4)
-@click.option("--adam-eps", default=1e-8)
-@click.option("--num-training-steps", default=1000)
-@click.option("--gradient-accumulation-steps", default=1)
-@click.option("--batch-size", default=1)
-@click.option("--dataloader-num-workers", default=1)
+@click.option("--amp/--no-amp", default=False, help="use automatic mixed precision")
+@click.option("--device", default=None, help="device to run the model on")
+@click.option(
+    "--compile-model/--no-compile-model", default=False, help="compile the model"
+)
+@click.option(
+    "--lora-layers",
+    default=None,
+    help="comma-separated list of the names of the layers to apply LoRA to",
+)
+@click.option(
+    "--lora-blocks",
+    default=None,
+    help=(
+        "comma-separated list of the indices of the Transformer blocks to apply LoRA to"
+    ),
+)
+@click.option("--lora-rank", default=64, help="rank of LoRA approximations")
+@click.option("--lora-alpha", type=int, default=None, help="alpha parameter for LoRA")
+@click.option("--learning-rate", default=1e-4, help="starting learning rate")
+@click.option("--adam-beta1", default=0.9, help="beta1 for the AdamW optimizer")
+@click.option("--adam-beta2", default=0.999, help="beta2 for the AdamW optimizer")
+@click.option(
+    "--adam-weight-decay", default=1e-4, help="weight decay for the AdamW optimizer"
+)
+@click.option("--adam-eps", default=1e-8, help="epsilon for the AdamW optimizer")
+@click.option("--num-training-steps", default=1000, help="number of training steps")
+@click.option(
+    "--gradient-accumulation-steps",
+    default=1,
+    help="number of steps to accumulate gradients over that constitute a training step",
+)
+@click.option("--batch-size", default=1, help="batch size for training")
+@click.option(
+    "--dataloader-num-workers", default=1, help="number of workers for data loading"
+)
 @click.option(
     "--lr-scheduler",
     type=click.Choice(
@@ -121,30 +149,69 @@ class FineTuneArgs(TypedDict):
         ]
     ),
     default="constant",
+    help="type of the learning rate scheduler",
 )
-@click.option("--lr-warmup-steps", default=500)
-@click.option("--lr-num-cycles", default=1)
-@click.option("--lr-power", default=1.0)
-@click.option("--wandb-project", default="sd3-lora")
+@click.option(
+    "--lr-warmup-steps",
+    default=500,
+    help="number of warmup steps for the learning rate scheduler",
+)
+@click.option(
+    "--lr-num-cycles",
+    default=1,
+    help="number of cycles for the cosine-with-restarts learning rate scheduler",
+)
+@click.option(
+    "--lr-power", default=1.0, help="power for the polynomial learning rate scheduler"
+)
+@click.option(
+    "--wandb-project", default="sd3-lora", help="name of the W&B project for logging"
+)
 @click.option(
     "--weighting-scheme",
     type=click.Choice(["sigma_sqrt", "logit_normal", "mode", "cosmap"]),
     default="logit_normal",
+    help="weighting scheme for sampling timesteps",
 )
-@click.option("--logit-mean", default=0.0)
-@click.option("--logit-std", default=1.0)
-@click.option("--mode-scale", default=1.29)
-@click.option("--max-grad-norm", default=1.0)
+@click.option(
+    "--logit-mean",
+    default=0.0,
+    help="mean of the logit distribution for sampling timesteps",
+)
+@click.option(
+    "--logit-std",
+    default=1.0,
+    help="standard deviation of the logit distribution for sampling timesteps",
+)
+@click.option(
+    "--mode-scale",
+    default=1.29,
+    help="scale for the mode weighting scheme for sampling timesteps",
+)
+@click.option(
+    "--max-grad-norm", default=1.0, help="maximum gradient norm for gradient clipping"
+)
 @click.option(
     "--checkpoint-dir",
     type=click.Path(
         exists=False, file_okay=False, dir_okay=True, writable=True, path_type=Path
     ),
     default="checkpoints",
+    help="directory to save checkpoints to",
 )
-@click.option("--checkpointing-steps", default=100)
+@click.option(
+    "--checkpointing-steps",
+    default=100,
+    help="number of training steps between saving checkpoints",
+)
 def fine_tune(**kwargs: FineTuneArgs) -> None:
-    """Fine-tune a Stable Diffusion 3 model using LoRA."""
+    """Fine-tune a Stable Diffusion 3 model using LoRA.
+
+    DATASET_DIR is the directory containing the training examples.
+
+    EMPTY_PROMPT_DIR is the directory containing the text embeddings of the empty
+    prompt.
+    """
 
     _logger.info("Arguments to fine-tune: %s", kwargs)
     FineTune(kwargs).run()
@@ -171,7 +238,7 @@ class FineTune:
         self.lr_scheduler: torch.optim.lr_scheduler.LambdaLR | None = None
 
     def run(self) -> None:
-        """Run the subcommand."""
+        """Runs the subcommand."""
 
         self.infer_device()
 
@@ -240,7 +307,7 @@ class FineTune:
         self.save_checkpoint(self.args["checkpoint_dir"])
 
     def infer_device(self) -> None:
-        """Infer the PyTorch device to use."""
+        """Infers the PyTorch device to use."""
 
         device_str = self.args["device"]
         if device_str is None:
@@ -249,7 +316,7 @@ class FineTune:
         _logger.info("Using device: %s", self.device)
 
     def load_model(self) -> None:
-        """Load the transformer and noise scheduler."""
+        """Loads the transformer and noise scheduler."""
 
         _logger.info(
             "Loading model '%s', revision '%s'",
@@ -273,7 +340,7 @@ class FineTune:
         )
 
     def add_lora_adapter(self) -> None:
-        """Add the LoRA adapter to the transformer."""
+        """Adds the LoRA adapter to the transformer."""
 
         if self.args["lora_layers"] is not None:
             target_modules = [
@@ -319,7 +386,7 @@ class FineTune:
         )
 
     def create_optimizer(self) -> None:
-        """Create the optimizer for fine-tuning."""
+        """Creates the optimizer for fine-tuning."""
 
         self.optimizer = torch.optim.AdamW(
             self.lora_params,
@@ -330,7 +397,7 @@ class FineTune:
         )
 
     def create_dataloader(self) -> None:
-        """Create the dataloader for fine-tuning."""
+        """Creates the dataloader for fine-tuning."""
 
         dataset = ImageAndPromptDataset(
             self.args["dataset_dir"], self.args["empty_prompt_dir"], self.weight_dtype
@@ -352,7 +419,7 @@ class FineTune:
         )
 
     def create_lr_scheduler(self) -> None:
-        """Create the learning rate scheduler."""
+        """Creates the learning rate scheduler."""
 
         self.lr_scheduler = get_scheduler(
             self.args["lr_scheduler"],
@@ -366,7 +433,7 @@ class FineTune:
     def training_step(
         self, examples: ImageAndPromptDataset.ExampleBatch, sync_gradients: bool
     ) -> float:
-        """Perform a single training step."""
+        """Performs a single training step."""
 
         with (
             torch.amp.autocast(device_type=self.device.type)
@@ -401,7 +468,7 @@ class FineTune:
     def compute_loss(
         self, examples: ImageAndPromptDataset.ExampleBatch
     ) -> torch.Tensor:
-        """Compute the loss for a batch of examples."""
+        """Computes the loss for a batch of examples."""
 
         model_input = examples["model_input"].to(self.device)
         noise = torch.randn_like(model_input)
@@ -432,7 +499,7 @@ class FineTune:
     def sample_timesteps_and_sigmas(
         self, batch_size: int, n_dim: int
     ) -> tuple[torch.Tensor, torch.Tensor]:
-        """Sample a batch of timesteps for training, and get the corresponding sigma
+        """Samples a batch of timesteps for training, and gets the corresponding sigma
         values for scaling the noise."""
 
         u = compute_density_for_timestep_sampling(
@@ -452,7 +519,7 @@ class FineTune:
         return timesteps, sigmas
 
     def save_checkpoint(self, save_dir: Path) -> None:
-        """Save a checkpoint of the LoRA weights."""
+        """Saves a checkpoint of the LoRA weights."""
 
         _logger.info("Saving checkpoint to '%s'", save_dir)
         self.args["checkpoint_dir"].mkdir(exist_ok=True)
@@ -461,7 +528,7 @@ class FineTune:
         )
 
     def unwrap_transformer(self) -> SD3Transformer2DModel:
-        """If the transformer is an OptimizedModule, unwrap it to get the original
+        """If the transformer is an OptimizedModule, unwraps it to get the original
         module."""
 
         if isinstance(self.transformer, OptimizedModule):

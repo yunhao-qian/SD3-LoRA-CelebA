@@ -42,10 +42,21 @@ class PrepareCelebAHQArgs(TypedDict):
         exists=False, file_okay=False, dir_okay=True, writable=True, path_type=Path
     ),
 )
-@click.option("--relative-path/--no-relative-path", default=False)
-@click.option("--random-seed", type=int, default=42)
+@click.option(
+    "--relative-path/--no-relative-path",
+    default=False,
+    help="use relative paths in image_path.txt files",
+)
+@click.option(
+    "--random-seed", type=int, default=42, help="random seed for splitting the dataset"
+)
 def prepare_celeba_hq(**kwargs: PrepareCelebAHQArgs) -> None:
-    """Prepare images and boolean attributes in the CelebA-HQ dataset."""
+    """Prepare images and boolean attributes in the CelebA-HQ dataset.
+
+    CELEBA_MASK_HQ_DIR is the directory containing the CelebA-HQ dataset.
+
+    OUTPUT_DIR is the directory to write the prepared dataset to.
+    """
 
     _logger.info("Arguments to prepare-celeba-hq: %s", kwargs)
     PrepareCelebAHQ(kwargs).run()
@@ -61,7 +72,7 @@ class PrepareCelebAHQ:
         self.split_indices: dict[str, np.ndarray] | None = None
 
     def run(self) -> None:
-        """Run the subcommand."""
+        """Runs the subcommand."""
 
         self.args["output_dir"].mkdir(exist_ok=True)
         self.read_attribute_file()
@@ -79,7 +90,7 @@ class PrepareCelebAHQ:
                 progress.update()
 
     def read_attribute_file(self) -> None:
-        """Read the attribute file."""
+        """Reads the attribute file."""
 
         attribute_file_path = (
             self.args["celeba_mask_hq_dir"] / "CelebAMask-HQ-attribute-anno.txt"
@@ -89,7 +100,7 @@ class PrepareCelebAHQ:
             self.attribute_data = read_attribute_file(file)
 
     def split_data(self) -> None:
-        """Split the examples into training, validation, and test sets."""
+        """Splits the examples into training, validation, and test sets."""
 
         # Use only the following attributes for stratified sampling. Adding more
         # attributes results in classes with a single example.
@@ -122,7 +133,7 @@ class PrepareCelebAHQ:
         }
 
     def print_attribute_frequencies(self) -> None:
-        """Print the attribute frequencies of each split."""
+        """Prints the attribute frequencies of each split."""
 
         attribute_values: dict[str, np.ndarray] = {
             "All": self.attribute_data["attribute_values"]
@@ -144,7 +155,7 @@ class PrepareCelebAHQ:
         rich.print(table)
 
     def write_example(self, split_dir: Path, example_index: int) -> None:
-        """Write an example to the output directory."""
+        """Writes an example to the output directory."""
 
         image_filename = self.attribute_data["image_filenames"][example_index]
 

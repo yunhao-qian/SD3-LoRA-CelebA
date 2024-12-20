@@ -41,14 +41,38 @@ class ComputePromptEmbedsArgs(TypedDict):
     ),
 )
 @click.argument("text_encoder_id", type=click.Choice(["1", "2", "3"]))
-@click.option("--overwrite/--no-overwrite", default=False)
-@click.option("--prompt-embed-filename", default=None)
-@click.option("--model-name", default="stabilityai/stable-diffusion-3-medium-diffusers")
-@click.option("--model-revision", default="main")
-@click.option("--compile-model/--no-compile-model", default=False)
-@click.option("--batch-size", type=int, default=1)
+@click.option(
+    "--overwrite/--no-overwrite",
+    default=False,
+    help="overwrite existing prompt embedding files",
+)
+@click.option(
+    "--prompt-embed-filename", default=None, help="filename for prompt embeddings"
+)
+@click.option(
+    "--model-name",
+    default="stabilityai/stable-diffusion-3-medium-diffusers",
+    help="Stable Diffusion 3 model name",
+)
+@click.option(
+    "--model-revision", default="main", help="Stable Diffusion 3 model revision"
+)
+@click.option(
+    "--compile-model/--no-compile-model", default=False, help="compile the model"
+)
+@click.option(
+    "--batch-size",
+    type=int,
+    default=1,
+    help="batch size for computing prompt embeddings",
+)
 def compute_prompt_embeds(**kwargs: ComputePromptEmbedsArgs) -> None:
-    """Compute and save the text embeddings of prompts."""
+    """Compute and save the text embeddings of prompts.
+
+    DATASET_DIR is the directory containing the prompts to process.
+
+    TEXT_ENCODER_ID (one of 1, 2, 3) is the text encoder to use.
+    """
 
     _logger.info("Arguments to compute-prompt-embeds: %s", kwargs)
     ComputePromptEmbeds(kwargs).run()
@@ -64,7 +88,7 @@ class ComputePromptEmbeds:
         self.model: ModelBase | None = None
 
     def run(self) -> None:
-        """Run the subcommand."""
+        """Runs the subcommand."""
 
         self.infer_prompt_embed_filename()
         self.find_example_dirs_to_process()
@@ -85,7 +109,7 @@ class ComputePromptEmbeds:
             progress.update(len(example_dirs))
 
     def infer_prompt_embed_filename(self) -> None:
-        """Infer the prompt embedding filename."""
+        """Infers the prompt embedding filename."""
 
         if self.args["prompt_embed_filename"] is None:
             self.args["prompt_embed_filename"] = (
@@ -97,7 +121,7 @@ class ComputePromptEmbeds:
         )
 
     def find_example_dirs_to_process(self) -> None:
-        """Find the example directories to process."""
+        """Finds the example directories to process."""
 
         _logger.info("Searching for examples in '%s'", self.args["dataset_dir"])
 
@@ -124,7 +148,7 @@ class ComputePromptEmbeds:
         self.example_dirs = list(example_dirs)
 
     def load_model(self) -> None:
-        """Load the text encoder and tokenizer."""
+        """Loads the text encoder and tokenizer."""
 
         _logger.info(
             "Loading model '%s', revision '%s'",
@@ -211,7 +235,7 @@ class ModelBase(ABC, Generic[TextEncoderClass, TokenizerClass]):
     def embed_example_dirs(
         self, example_dirs: list[Path]
     ) -> list[dict[str, torch.Tensor]]:
-        """Embed the prompts of the given example directories."""
+        """Embeds the prompts of the given example directories."""
 
         prompt_example_dirs: list[Path] = []
         prompt_variants: list[str] = []
@@ -238,7 +262,7 @@ class ModelBase(ABC, Generic[TextEncoderClass, TokenizerClass]):
 
     @abstractmethod
     def embed_texts(self, _: list[str]) -> dict[str, torch.Tensor]:
-        """Compute the embeddings of the given texts."""
+        """Computes the embeddings of the given texts."""
 
 
 class CLIPModel(ModelBase[CLIPTextModelWithProjection, CLIPTokenizer]):

@@ -21,7 +21,7 @@ class CelebAAttributeData(TypedDict):
 
 
 def read_attribute_file(file: TextIOBase) -> CelebAAttributeData:
-    """Read data from an attribute file in the CelebA or CelebA-HQ dataset."""
+    """Reads data from an attribute file in the CelebA or CelebA-HQ dataset."""
 
     num_examples = int(file.readline())
     _logger.info("Number of examples: %d", num_examples)
@@ -51,7 +51,7 @@ def read_attribute_file(file: TextIOBase) -> CelebAAttributeData:
 
 
 def read_attribute_json_files(example_dirs: list[Path]) -> tuple[list[str], np.ndarray]:
-    """Read CelebA attribute data from JSON files."""
+    """Reads CelebA attribute data from JSON files."""
 
     _logger.info("Reading attribute JSON files from %d examples", len(example_dirs))
 
@@ -79,7 +79,7 @@ def read_attribute_json_files(example_dirs: list[Path]) -> tuple[list[str], np.n
 def create_attribute_frequency_table(
     title: str, attribute_names: list[str], attribute_values: dict[str, np.ndarray]
 ) -> Table:
-    """Create a table of attribute frequencies."""
+    """Creates a table of attribute frequencies."""
 
     table = Table(title=title)
     table.add_column("Attribute")

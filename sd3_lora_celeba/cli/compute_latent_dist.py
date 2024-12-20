@@ -37,16 +37,42 @@ class ComputeLatentDistArgs(TypedDict):
         exists=True, file_okay=False, dir_okay=True, readable=True, path_type=Path
     ),
 )
-@click.option("--overwrite/--no-overwrite", default=False)
-@click.option("--latent-dist-filename", default="latent_dist.safetensors")
-@click.option("--model-name", default="stabilityai/stable-diffusion-3-medium-diffusers")
-@click.option("--model-revision", default="main")
-@click.option("--compile-model/--no-compile-model", default=False)
-@click.option("--image-size", type=int, default=1024)
-@click.option("--batch-size", type=int, default=1)
-@click.option("--num-workers", type=int, default=1)
+@click.option(
+    "--overwrite/--no-overwrite",
+    default=False,
+    help="overwrite existing latent distribution files",
+)
+@click.option(
+    "--latent-dist-filename",
+    default="latent_dist.safetensors",
+    help="filename for latent distributions",
+)
+@click.option(
+    "--model-name",
+    default="stabilityai/stable-diffusion-3-medium-diffusers",
+    help="Stable Diffusion 3 model name",
+)
+@click.option(
+    "--model-revision", default="main", help="Stable Diffusion 3 model revision"
+)
+@click.option(
+    "--compile-model/--no-compile-model", default=False, help="compile the model"
+)
+@click.option("--image-size", type=int, default=1024, help="size to resize images to")
+@click.option(
+    "--batch-size",
+    type=int,
+    default=1,
+    help="batch size for computing latent distributions",
+)
+@click.option(
+    "--num-workers", type=int, default=1, help="number of workers for data loading"
+)
 def compute_latent_dist(**kwargs: ComputeLatentDistArgs) -> None:
-    """Compute and save the latent distributions of images."""
+    """Compute and save the latent distributions of images.
+
+    DATASET_DIR is the directory containing the images to process.
+    """
 
     _logger.info("Arguments to compute-latent-dist: %s", kwargs)
     ComputeLatentDist(kwargs).run()
@@ -61,7 +87,7 @@ class ComputeLatentDist:
         self.vae: AutoencoderKL | None = None
 
     def run(self) -> None:
-        """Run the subcommand."""
+        """Runs the subcommand."""
 
         self.load_model()
 
@@ -80,7 +106,7 @@ class ComputeLatentDist:
             progress.update(len(examples["example_dirs"]))
 
     def load_model(self) -> None:
-        """Load the VAE encoder model."""
+        """Loads the VAE encoder model."""
 
         _logger.info(
             "Loading model '%s', revision '%s'",
@@ -102,7 +128,7 @@ class ComputeLatentDist:
             )
 
     def create_dataset(self) -> ImageDataset:
-        """Create the dataset of images to process."""
+        """Creates the dataset of images to process."""
 
         transform = transforms.Compose(
             [
@@ -121,7 +147,7 @@ class ComputeLatentDist:
         )
 
     def process_batch(self, examples: ImageDataset.ExampleBatch) -> None:
-        """Compute and save the latent distributions for a batch of images."""
+        """Computes and saves the latent distributions for a batch of images."""
 
         pixel_values = examples["pixel_values"].to(self.vae.device)
 

@@ -35,18 +35,34 @@ class CaptionBLIP2Args(TypedDict):
         exists=True, file_okay=False, dir_okay=True, readable=True, path_type=Path
     ),
 )
-@click.option("--overwrite/--no-overwrite", default=False)
-@click.option("--caption-filename", default="prompt_blip2.txt")
-@click.option("--model-name", default="Salesforce/blip2-flan-t5-xl-coco")
-@click.option("--model-revision", default="main")
 @click.option(
-    "--precision", type=click.Choice(["float32", "float16", "8bit"]), default="float32"
+    "--overwrite/--no-overwrite", default=False, help="overwrite existing caption files"
 )
-@click.option("--compile-model/--no-compile-model", default=False)
-@click.option("--batch-size", type=int, default=1)
-@click.option("--num-workers", type=int, default=1)
+@click.option(
+    "--caption-filename", default="prompt_blip2.txt", help="filename for captions"
+)
+@click.option(
+    "--model-name", default="Salesforce/blip2-flan-t5-xl-coco", help="BLIP-2 model name"
+)
+@click.option("--model-revision", default="main", help="BLIP-2 model revision")
+@click.option(
+    "--precision",
+    type=click.Choice(["float32", "float16", "8bit"]),
+    default="float32",
+    help="data type to run the model in",
+)
+@click.option(
+    "--compile-model/--no-compile-model", default=False, help="compile the model"
+)
+@click.option("--batch-size", type=int, default=1, help="batch size for captioning")
+@click.option(
+    "--num-workers", type=int, default=1, help="number of workers for data loading"
+)
 def caption_blip2(**kwargs: CaptionBLIP2Args) -> None:
-    """Caption images using a BLIP-2 model."""
+    """Caption images using a BLIP-2 model.
+
+    DATASET_DIR is the directory containing the images to caption.
+    """
 
     _logger.info("Arguments to caption-blip2: %s", kwargs)
     CaptionBLIP2(kwargs).run()
@@ -63,7 +79,7 @@ class CaptionBLIP2:
         self.model: Blip2ForConditionalGeneration | None = None
 
     def run(self) -> None:
-        """Run the subcommand."""
+        """Runs the subcommand."""
 
         self.load_model()
 
@@ -88,7 +104,7 @@ class CaptionBLIP2:
             progress.update(len(examples["example_dirs"]))
 
     def load_model(self) -> None:
-        """Load the BLIP-2 processor and model."""
+        """Loads the BLIP-2 processor and model."""
 
         match self.args["precision"]:
             case "float32":
@@ -127,7 +143,7 @@ class CaptionBLIP2:
             self.model = torch.compile(self.model, fullgraph=True, mode="max-autotune")
 
     def process_batch(self, examples: ImageDataset.ExampleBatch) -> None:
-        """Caption a batch of examples and save the results."""
+        """Captions a batch of examples and saves the results."""
 
         inputs = self.processor(examples["images"], return_tensors="pt").to(
             self.model.device, self.input_dtype

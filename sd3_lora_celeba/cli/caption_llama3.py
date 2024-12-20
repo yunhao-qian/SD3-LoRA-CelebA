@@ -33,18 +33,34 @@ class CaptionLlama3Args(TypedDict):
         exists=True, file_okay=False, dir_okay=True, readable=True, path_type=Path
     ),
 )
-@click.option("--overwrite/--no-overwrite", default=False)
-@click.option("--caption-filename", default="prompt_llama3.txt")
-@click.option("--blip2-caption-filename", default="prompt_blip2.txt")
-@click.option("--model-name", default="meta-llama/Llama-3.1-8B-Instruct")
-@click.option("--model-revision", default="main")
+@click.option(
+    "--overwrite/--no-overwrite", default=False, help="overwrite existing caption files"
+)
+@click.option(
+    "--caption-filename", default="prompt_llama3.txt", help="filename for captions"
+)
+@click.option(
+    "--blip2-caption-filename",
+    default="prompt_blip2.txt",
+    help="filename for BLIP-2 captions to extend",
+)
+@click.option(
+    "--model-name",
+    default="meta-llama/Llama-3.1-8B-Instruct",
+    help="Llama 3 model name",
+)
+@click.option("--model-revision", default="main", help="Llama 3 model revision")
 @click.option(
     "--precision",
     type=click.Choice(["bfloat16", "float16", "8bit", "4bit"]),
     default="bfloat16",
+    help="data type to run the model in",
 )
 def caption_llama3(**kwargs: CaptionLlama3Args) -> None:
-    """Extend BLIP-2 captions with CelebA attributes using a Llama 3 model."""
+    """Extend BLIP-2 captions with CelebA attributes using a Llama 3 model.
+
+    DATASET_DIR is the directory containing the captions to process.
+    """
 
     _logger.info("Arguments to caption-llama3: %s", kwargs)
     CaptionLlama3(kwargs).run()
@@ -60,7 +76,7 @@ class CaptionLlama3:
         self.pipeline: Pipeline | None = None
 
     def run(self) -> None:
-        """Run the subcommand."""
+        """Runs the subcommand."""
 
         self.find_example_dirs_to_caption()
         self.load_model()
@@ -69,7 +85,7 @@ class CaptionLlama3:
             self.process_example(example_dir)
 
     def find_example_dirs_to_caption(self) -> None:
-        """Find the example directories to caption."""
+        """Finds the example directories to caption."""
 
         _logger.info("Searching for examples in '%s'", self.args["dataset_dir"])
 
@@ -92,7 +108,7 @@ class CaptionLlama3:
         _logger.info("Found %d examples to caption", len(self.example_dirs))
 
     def load_model(self) -> None:
-        """Load the Llama 3 model."""
+        """Loads the Llama 3 model."""
 
         _logger.info(
             "Loading model '%s', revision '%s'",
@@ -127,7 +143,7 @@ class CaptionLlama3:
         )
 
     def process_example(self, example_dir: Path) -> None:
-        """Generate and save the caption for an example."""
+        """Generates and saves the caption for an example."""
 
         blip2_caption = (
             (example_dir / self.args["blip2_caption_filename"])
@@ -160,7 +176,7 @@ class CaptionLlama3:
     def create_chat_messages(
         blip2_caption: str, attributes: dict[str, bool]
     ) -> list[dict[str, str]]:
-        """Create chat messages to pass to the Llama 3 model."""
+        """Creates chat messages to pass to the Llama 3 model."""
 
         # For attributes except "Male" and "No_Beard", the attribute is mentioned only
         # if its value is True.

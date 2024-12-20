@@ -52,23 +52,55 @@ class GenerateImagesArgs(TypedDict):
         exists=False, file_okay=False, dir_okay=True, writable=True, path_type=Path
     ),
 )
-@click.option("--model-name", default="stabilityai/stable-diffusion-3-medium-diffusers")
-@click.option("--model-revision", default="main")
+@click.option(
+    "--model-name",
+    default="stabilityai/stable-diffusion-3-medium-diffusers",
+    help="Stable Diffusion 3 model name",
+)
+@click.option(
+    "--model-revision", default="main", help="Stable Diffusion 3 model revision"
+)
 @click.option(
     "--lora-weight-dir",
     type=click.Path(
         exists=True, file_okay=False, dir_okay=True, readable=True, path_type=Path
     ),
     default=None,
+    help="directory containing LoRA weights, if any",
 )
-@click.option("--compile-model/--no-compile-model", default=False)
-@click.option("--batch-size", type=int, default=1)
-@click.option("--num-workers", type=int, default=1)
-@click.option("--num-inference-steps", type=int, default=28)
-@click.option("--guidance-scale", type=float, default=7.0)
-@click.option("--random-seed", type=int, default=None)
+@click.option(
+    "--compile-model/--no-compile-model", default=False, help="compile the model"
+)
+@click.option(
+    "--batch-size", type=int, default=1, help="batch size for generating images"
+)
+@click.option(
+    "--num-workers", type=int, default=1, help="number of workers for data loading"
+)
+@click.option(
+    "--num-inference-steps", type=int, default=28, help="number of inference steps"
+)
+@click.option(
+    "--guidance-scale",
+    type=float,
+    default=7.0,
+    help="guidance scale for classifier-free guidance",
+)
+@click.option(
+    "--random-seed", type=int, default=None, help="random seed for generating images"
+)
 def generate_images(**kwargs: GenerateImagesArgs) -> None:
-    """Generate images from text embeddings of prompts."""
+    """Generate images from text embeddings of prompts.
+
+    DATASET_DIR is the directory containing the text embeddings of prompts.
+
+    EMPTY_PROMPT_DIR is the directory containing the text embeddings of the empty
+    prompt.
+
+    PROMPT_VARIANT (one of 'blip2' or 'llama3') is the variant of prompts to use.
+
+    OUTPUT_DIR is the directory to save the generated images to.
+    """
 
     _logger.info("Arguments to generate-images: %s", kwargs)
     GenerateImages(kwargs).run()
@@ -128,7 +160,7 @@ class GenerateImages:
         self.empty_pooled_prompt_embeds: torch.Tensor | None = None
 
     def run(self) -> None:
-        """Run the subcommand."""
+        """Runs the subcommand."""
 
         self.args["output_dir"].mkdir(exist_ok=True)
 
@@ -152,7 +184,7 @@ class GenerateImages:
             progress.update(len(examples["name"]))
 
     def load_pipeline(self) -> None:
-        """Load the Stable Diffusion 3 pipeline."""
+        """Loads the Stable Diffusion 3 pipeline."""
 
         self.pipeline = StableDiffusion3Pipeline.from_pretrained(
             self.args["model_name"],
@@ -183,7 +215,7 @@ class GenerateImages:
         self.pipeline.set_progress_bar_config(disable=True)
 
     def load_empty_prompt_embeds(self) -> None:
-        """Load the text embeddings of the empty prompt."""
+        """Loads the text embeddings of the empty prompt."""
 
         empty_prompt_embeds, empty_pooled_prompt_embeds = load_prompt_embeds(
             self.args["empty_prompt_dir"], "empty", torch.float16
@@ -194,7 +226,7 @@ class GenerateImages:
         )
 
     def process_batch(self, examples: PromptDataset.ExampleBatch) -> None:
-        """Generate images for a batch of examples."""
+        """Generates images for a batch of examples."""
 
         prompt_embeds = examples["prompt_embeds"].to(self.pipeline.device)
         pooled_prompt_embeds = examples["pooled_prompt_embeds"].to(self.pipeline.device)

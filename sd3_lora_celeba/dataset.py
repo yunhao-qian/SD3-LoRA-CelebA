@@ -77,7 +77,7 @@ class ImageDataset(torch.utils.data.Dataset):
 
     @staticmethod
     def collate(examples: list[Example]) -> ExampleBatch:
-        """Collate a list of examples into a batch."""
+        """Collates a list of examples into a batch."""
 
         example_dirs: list[Path] = []
         images: list[Image.Image] = []
@@ -198,7 +198,7 @@ class ImageAndPromptDataset(torch.utils.data.Dataset):
         }
 
     def load_latent_dist_file(self, file_path: Path) -> torch.Tensor:
-        """Load the latent distribution from a file and sample from it."""
+        """Loads the latent distribution from a file and samples from it."""
 
         with safe_open(file_path, framework="pt") as file:
             latent_dist = file.get_tensor(random.choice(["original", "flipped"]))
@@ -211,7 +211,7 @@ class ImageAndPromptDataset(torch.utils.data.Dataset):
         return model_input
 
     def get_sampling_weights(self) -> list[float]:
-        """Compute the sampling weights to balance attribute frequencies."""
+        """Computes the sampling weights to balance attribute frequencies."""
 
         attribute_names, attribute_values = read_attribute_json_files(self.example_dirs)
 
