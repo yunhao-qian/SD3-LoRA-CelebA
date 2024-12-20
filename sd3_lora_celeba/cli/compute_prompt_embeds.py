@@ -67,7 +67,7 @@ class ComputePromptEmbedsArgs(TypedDict):
     help="batch size for computing prompt embeddings",
 )
 def compute_prompt_embeds(**kwargs: ComputePromptEmbedsArgs) -> None:
-    """Compute and save the text embeddings of prompts.
+    """Compute and save the prompt embeddings.
 
     DATASET_DIR is the directory containing the prompts to process.
 

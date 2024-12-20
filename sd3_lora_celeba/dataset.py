@@ -153,7 +153,7 @@ def load_prompt_embeds(
 
 
 class ImageAndPromptDataset(torch.utils.data.Dataset):
-    """Dataset for loading latents of images and text embeddings of prompts."""
+    """Dataset for loading image latent distributions and prompt embeddings."""
 
     class Example(TypedDict):
         """An example from ImageAndPromptDataset."""

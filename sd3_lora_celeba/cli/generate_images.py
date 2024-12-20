@@ -90,9 +90,9 @@ class GenerateImagesArgs(TypedDict):
     "--random-seed", type=int, default=None, help="random seed for generating images"
 )
 def generate_images(**kwargs: GenerateImagesArgs) -> None:
-    """Generate images from text embeddings of prompts.
+    """Generate images from prompt embeddings.
 
-    DATASET_DIR is the directory containing the text embeddings of prompts.
+    DATASET_DIR is the directory containing the prompt embeddings.
 
     EMPTY_PROMPT_DIR is the directory containing the text embeddings of the empty
     prompt.
@@ -107,7 +107,7 @@ def generate_images(**kwargs: GenerateImagesArgs) -> None:
 
 
 class PromptDataset(torch.utils.data.Dataset):
-    """Dataset for loading text embeddings of prompts."""
+    """Dataset for loading prompt embeddings."""
 
     class Example(TypedDict):
         """An example from PromptDataset."""
