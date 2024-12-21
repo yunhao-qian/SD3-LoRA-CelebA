@@ -1,7 +1,7 @@
-"""Utility classes for visualizing the Stable Diffusion 3 model."""
+"""Implementation of the TextTokenAndImageVisualizer class."""
 
 import itertools
-from collections.abc import Generator, Iterable
+from collections.abc import Generator, Iterable, Sequence
 from pathlib import Path
 from typing import Literal, NamedTuple
 
@@ -9,6 +9,9 @@ import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 
 BBox = tuple[int, int, int, int]
+TokenID = Literal["clip_heading", "t5_heading"] | int
+TypesetInput = tuple[str, ImageFont.FreeTypeFont, TokenID] | Literal["\n", " "]
+TypesetOutput = tuple[BBox, TokenID]
 
 
 class TextTokenAndImageVisualizer:
@@ -26,24 +29,6 @@ class TextTokenAndImageVisualizer:
         text_token_font_size: int = 56
         text_token_corner_radius: int = 10
 
-    class _TypesetInput(NamedTuple):
-        input_type: Literal["text", "newline", "space"]
-        font: ImageFont.FreeTypeFont | None = None
-        text: str = ""
-        input_id: str = ""
-
-        def get_bbox_size(self) -> tuple[int, int]:
-            """Returns the bounding box size of the text."""
-
-            bbox_width = self.font.getlength(self.text)
-            ascent, descent = self.font.getmetrics()
-            bbox_height = ascent + descent
-            return bbox_width, bbox_height
-
-    class _TypesetOutput(NamedTuple):
-        bbox: BBox
-        input_id: str
-
     def __init__(self, config: Config = Config()) -> None:
         self._config = config
 
@@ -54,57 +39,58 @@ class TextTokenAndImageVisualizer:
         self._text_token_font = ImageFont.truetype(
             font_path, config.text_token_font_size
         )
+
         self._text_token_bboxes: dict[int, BBox] = {}
         self._image_offset: int = 0
-        self._figure: Image.Image | None = None
 
-    def set_data(
+    @property
+    def image_size(self) -> int:
+        """The size to resize the image to."""
+
+        return self._config.figure_width - 2 * self._config.figure_padding
+
+    def visualize_data(
         self,
-        clip_tokens: dict[int, str],
+        clip_tokens: Sequence[str],
         clip_token_colors: np.ndarray,
-        t5_tokens: dict[int, str],
+        t5_tokens: Sequence[str],
         t5_token_colors: np.ndarray,
         image: Image.Image,
     ) -> None:
-        """Sets the data to visualize.
+        """Visualizes the text tokens and the image.
 
         Args:
-            clip_tokens: A dictionary mapping token indices to token strings.
-            clip_token_colors: `uint8` RGB/RGBA colors of shape `(num_tokens, 3|4)`.
-            t5_tokens: A dictionary mapping token indices to token strings.
-            t5_token_colors: `uint8` RGB/RGBA colors of shape `(num_tokens, 3|4)`.
-            image: An image to visualize.
+            clip_tokens: A sequence of CLIP token strings.
+            clip_token_colors: RGB/RGBA colors of shape `(num_tokens, 3|4)`.
+            t5_tokens: A sequence of T5 token strings.
+            t5_token_colors: RGB/RGBA colors of shape `(num_tokens, 3|4)`.
+            image: The image to visualize.
+
+        Returns:
+            The visualized figure.
         """
 
-        # Construct the typeset inputs.
-        inputs: list[self._TypesetInput] = []
+        inputs: list[TypesetInput] = []
+
         clip_heading = "CLIP tokens:"
-        inputs.append(
-            self._TypesetInput("text", self._heading_font, clip_heading, "clip_heading")
-        )
-        inputs.append(self._TypesetInput("newline"))
-        for i, (token_index, token_str) in enumerate(clip_tokens.items()):
+        inputs.append((clip_heading, self._heading_font, "clip_heading"))
+        inputs.append("\n")
+        for i, token_str in enumerate(clip_tokens):
             if i > 0:
-                inputs.append(self._TypesetInput("space"))
-            inputs.append(
-                self._TypesetInput(
-                    "text", self._text_token_font, token_str, str(token_index)
-                )
-            )
-        inputs.append(self._TypesetInput("newline"))
+                inputs.append(" ")
+            token_index = 4096 + i
+            inputs.append((token_str, self._text_token_font, token_index))
+        inputs.append("\n")
+
         t5_heading = "T5 tokens:"
-        inputs.append(
-            self._TypesetInput("text", self._heading_font, t5_heading, "t5_heading")
-        )
-        inputs.append(self._TypesetInput("newline"))
-        for i, (token_index, token_str) in enumerate(t5_tokens.items()):
+        inputs.append((t5_heading, self._heading_font, "t5_heading"))
+        inputs.append("\n")
+        for i, token_str in enumerate(t5_tokens):
             if i > 0:
-                inputs.append(self._TypesetInput("space"))
-            inputs.append(
-                self._TypesetInput(
-                    "text", self._text_token_font, token_str, str(token_index)
-                )
-            )
+                inputs.append(" ")
+            token_index = 4096 + 77 + i
+            inputs.append((token_str, self._text_token_font, token_index))
+        inputs.append("\n")
 
         typeset_iter = self._typeset(inputs)
 
@@ -119,15 +105,16 @@ class TextTokenAndImageVisualizer:
             except StopIteration as e:
                 self._image_offset = e.value
                 break
-            if typeset_output.input_id == "clip_heading":
-                clip_heading_bbox = typeset_output.bbox
-            elif typeset_output.input_id == "t5_heading":
-                t5_heading_bbox = typeset_output.bbox
-            else:
-                token_index = int(typeset_output.input_id)
-                self._text_token_bboxes[token_index] = typeset_output.bbox
 
-        image_size = self._config.figure_width - 2 * self._config.figure_padding
+            bbox, token_id = typeset_output
+            if token_id == "clip_heading":
+                clip_heading_bbox = bbox
+            elif token_id == "t5_heading":
+                t5_heading_bbox = bbox
+            else:
+                self._text_token_bboxes[token_id] = bbox
+
+        image_size = self.image_size
         image = image.resize((image_size, image_size))
 
         figure = Image.new(
@@ -136,7 +123,7 @@ class TextTokenAndImageVisualizer:
                 self._config.figure_width,
                 self._image_offset + image_size + self._config.figure_padding,
             ),
-            "white",
+            color="white",
         )
 
         figure.paste(image, (self._config.figure_padding, self._image_offset))
@@ -156,9 +143,9 @@ class TextTokenAndImageVisualizer:
         t5_token_colors = self._to_uint8_colors(t5_token_colors)
 
         # Draw the tokens with colored backgrounds.
-        for (token_index, token_str), token_color in itertools.chain(
-            zip(clip_tokens.items(), clip_token_colors),
-            zip(t5_tokens.items(), t5_token_colors),
+        for token_index, (token_str, token_color) in itertools.chain(
+            enumerate(zip(clip_tokens, clip_token_colors), start=4096),
+            enumerate(zip(t5_tokens, t5_token_colors), start=4096 + 77),
         ):
             bbox = self._text_token_bboxes[token_index]
             draw.rounded_rectangle(
@@ -173,25 +160,18 @@ class TextTokenAndImageVisualizer:
                 font=self._text_token_font,
             )
 
-        self._figure = figure
+        return figure
 
-    def set_empty_data(self) -> None:
-        """Sets empty data to visualize."""
+    def visualize_empty_data(self) -> Image.Image:
+        """Visualizes an empty figure."""
 
-        self.set_data(
-            clip_tokens={},
-            clip_token_colors=np.empty((0, 4)),
-            t5_tokens={},
-            t5_token_colors=np.empty((0, 4)),
-            image=Image.new("RGB", (1024, 1024), "lightgray"),
+        return self.visualize_data(
+            clip_tokens=[],
+            clip_token_colors=np.empty((0, 3)),
+            t5_tokens=[],
+            t5_token_colors=np.empty((0, 3)),
+            image=Image.new("RGB", (256, 256), color="lightgray"),
         )
-
-    def get_figure(self) -> Image.Image:
-        """Returns the visualized figure."""
-
-        if self._figure is None:
-            raise ValueError("No data is set")
-        return self._figure
 
     def get_token_index(self, x: float, y: float) -> int | None:
         """Gets the index of the text of image token at the given position.
@@ -216,7 +196,7 @@ class TextTokenAndImageVisualizer:
 
         x -= self._config.figure_padding
         y -= self._image_offset
-        image_size = self._config.figure_width - 2 * self._config.figure_padding
+        image_size = self.image_size
         x /= image_size
         y /= image_size
 
@@ -229,22 +209,26 @@ class TextTokenAndImageVisualizer:
         return patch_y * 64 + patch_x
 
     def _typeset(
-        self, inputs: Iterable[_TypesetInput]
-    ) -> Generator[_TypesetOutput, None, int]:
+        self, inputs: Iterable[TypesetInput]
+    ) -> Generator[TypesetOutput, None, int]:
         x = self._config.figure_padding
         y = self._config.figure_padding
 
         for typeset_input in inputs:
-            if typeset_input.input_type == "newline":
+            if typeset_input == "\n":
                 x = self._config.figure_padding
                 y += self._config.line_spacing
                 continue
 
-            if typeset_input.input_type == "space":
+            if typeset_input == " ":
                 x += self._config.token_spacing
                 continue
 
-            bbox_width, bbox_height = typeset_input.get_bbox_size()
+            text, font, token_id = typeset_input
+
+            bbox_width = font.getlength(text)
+            ascent, descent = font.getmetrics()
+            bbox_height = ascent + descent
 
             # Breaks the line if we are not at the beginning of the line and the next
             # text does not fit in the current line.
@@ -256,9 +240,7 @@ class TextTokenAndImageVisualizer:
                 x = self._config.figure_padding
                 y += self._config.line_spacing
 
-            yield self._TypesetOutput(
-                (x, y, x + bbox_width, y + bbox_height), typeset_input.input_id
-            )
+            yield (x, y, x + bbox_width, y + bbox_height), token_id
             x += bbox_width
 
         return y + self._config.line_spacing + self._config.figure_padding

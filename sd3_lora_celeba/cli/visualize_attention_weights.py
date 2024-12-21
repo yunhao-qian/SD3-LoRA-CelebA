@@ -15,7 +15,7 @@ from diffusers.models.attention_processor import Attention, JointAttnProcessor2_
 from matplotlib import pyplot as plt
 from PIL import Image
 
-from ..visualization import TextTokenAndImageVisualizer
+from ..visualizer import TextTokenAndImageVisualizer
 
 _logger = logging.getLogger(__name__)
 
@@ -62,8 +62,8 @@ class VisualizeAttentionWeight:
         self.visualizer: TextTokenAndImageVisualizer | None = None
 
         self.visualization_mode: str | None = None
-        self.clip_tokens: dict[int, str] | None = None
-        self.t5_tokens: dict[int, str] | None = None
+        self.clip_tokens: list[int] | None = None
+        self.t5_tokens: list[int] | None = None
         self.generated_image: Image.Image | None = None
         self.attention_weight: np.ndarray | None = None
 
@@ -83,7 +83,6 @@ class VisualizeAttentionWeight:
         )
 
         self.visualizer = TextTokenAndImageVisualizer()
-        self.visualizer.set_empty_data()
 
         title = "Attention Weight Visualization for Stable Diffusion 3"
         with gr.Blocks(title=title) as demo:
@@ -146,7 +145,7 @@ class VisualizeAttentionWeight:
             run_button = gr.Button(value="Run")
 
             figure_output = gr.Image(
-                self.visualizer.get_figure(),
+                self.visualizer.visualize_empty_data(),
                 label="Visualization",
                 type="pil",
                 interactive=False,
@@ -249,14 +248,13 @@ class VisualizeAttentionWeight:
                 self.apply_ncut_colors(num_eigenvectors)
             )
 
-        self.visualizer.set_data(
+        return self.visualizer.visualize_data(
             self.clip_tokens,
             clip_token_colors,
             self.t5_tokens,
             t5_token_colors,
             image_to_display,
         )
-        return self.visualizer.get_figure()
 
     def on_figure_output_select(
         self, figure: Image.Image, event: gr.SelectData
@@ -289,14 +287,13 @@ class VisualizeAttentionWeight:
         ).reshape(64, 64, 4)
         image_to_display = self.apply_overlay(image_overlay)
 
-        self.visualizer.set_data(
+        return self.visualizer.visualize_data(
             self.clip_tokens,
             clip_token_colors,
             self.t5_tokens,
             t5_token_colors,
             image_to_display,
         )
-        return self.visualizer.get_figure()
 
     def get_generated_image_and_attention_weight(
         self,
@@ -366,12 +363,7 @@ class VisualizeAttentionWeight:
             max_length=77,
             truncation=True,
         )["input_ids"]
-        self.clip_tokens = dict(
-            enumerate(
-                self.pipeline.tokenizer.convert_ids_to_tokens(clip_token_ids),
-                start=4096,
-            )
-        )
+        self.clip_tokens = self.pipeline.tokenizer.convert_ids_to_tokens(clip_token_ids)
 
         t5_token_ids = self.pipeline.tokenizer_3(
             prompt,
@@ -380,12 +372,7 @@ class VisualizeAttentionWeight:
             truncation=True,
             add_special_tokens=True,
         )["input_ids"]
-        self.t5_tokens = dict(
-            enumerate(
-                self.pipeline.tokenizer_3.convert_ids_to_tokens(t5_token_ids),
-                start=4096 + 77,
-            )
-        )
+        self.t5_tokens = self.pipeline.tokenizer_3.convert_ids_to_tokens(t5_token_ids)
 
     @staticmethod
     def attention_weight_to_heatmap(weight: np.ndarray, kind: str) -> np.ndarray:
