@@ -8,6 +8,10 @@ The flowchart below summarizes our project workflow. The dataset was derived fro
 
 ## Results
 
+### Generated Images
+
+https://github.com/user-attachments/assets/d8c07d78-4276-4b31-a92b-61d9a127a1c2
+
 ### FID Scores
 
 We conducted three fine-tuning experiments using different means for the logit-normal distribution in timestep sampling. Images were generated with the pretrained model and the three fine-tuned models using prompts from the validation set, and their FID scores were calculated against the ground-truth images. The table below shows the results. The best FID score was 24.3, a significant improvement over the pretrained model's 80.0.
