@@ -1,0 +1,83 @@
+digraph G {
+    fontname="Sans-Serif";
+    fontsize=12;
+    node [shape=box style="filled,rounded" fontname="Sans-Serif" fontsize=12];
+
+    subgraph cluster_0 {
+        label="Dataset Preparation";
+        node [fillcolor="#F8CECC", color="#B85450"]
+
+        CelebAHQ [label="CelebA-HQ"];
+        CelebA [label="CelebA"];
+        FilterCropCelebA [label="Filter, Crop", shape=ellipse]
+        MergeCelebA [label="Merge" shape=ellipse];
+        Images [label="Images"];
+        BinaryAttributes [label="Binary Attributes"];
+        BLIP2Captions [label="BLIP-2 Captions"];
+        Llama3Captions [label="Llama 3 Captions"];
+        Prompts [label="Prompts"];
+        Dataset [label="Dataset"];
+        WeightedSampling [label="Weighted Sampling"];
+
+        CelebAHQ -> MergeCelebA;
+        CelebA -> FilterCropCelebA;
+        FilterCropCelebA -> MergeCelebA
+        MergeCelebA -> Images;
+        MergeCelebA -> BinaryAttributes;
+        Images -> BLIP2Captions;
+        BinaryAttributes -> Llama3Captions;
+        BLIP2Captions -> Llama3Captions;
+        BLIP2Captions -> Prompts;
+        Llama3Captions -> Prompts;
+        Images -> Dataset;
+        Prompts -> Dataset;
+        BinaryAttributes -> WeightedSampling;
+        Dataset -> WeightedSampling;
+    }
+
+    subgraph cluster_1 {
+        label="Fine-Tuning";
+        node [fillcolor="#D5E8D4", color="#82B366"]
+
+        PretrainedModel [label="Pretrained Model"];
+        MeanAblationExperiments [label="Mean Ablation Experiments"];
+        TransformerBlocksToFineTune [label="Transformer Blocks to Fine-Tune"];
+        StableDiffusion3LoRA [label="Stable Diffusion 3 + LoRA"];
+        FineTune [label="Fine-Tune" shape=ellipse];
+        FineTunedModel [label="Fine-tuned Model"];
+
+        PretrainedModel -> MeanAblationExperiments;
+        MeanAblationExperiments -> TransformerBlocksToFineTune;
+        PretrainedModel -> StableDiffusion3LoRA;
+        TransformerBlocksToFineTune -> StableDiffusion3LoRA;
+        WeightedSampling -> FineTune;
+        StableDiffusion3LoRA -> FineTune;
+        FineTune -> FineTunedModel;
+    }
+
+    subgraph cluster_2 {
+        label="Result Analysis";
+        node [fillcolor="#DAE8FC", color="#6C8EBF"]
+
+        ImageGeneration [label="Image Generation"];
+        CompareImages [label="Compare" shape=ellipse];
+        FIDScores [label="FID Scores"];
+        FeaturesCosineSimilarities [label="Features' Cosine Similarities"]
+        FeaturesCosineSimilaritiesNCUT [label="NCUT"];
+        AttentionWeights [label="Attention Weights"];
+        AttentionWeightsHeatmap [label="Heatmap"];
+        AttentionWeightsNCUTUndirected [label="NCUT Undirected"];
+
+        PretrainedModel -> ImageGeneration;
+        FineTunedModel -> ImageGeneration;
+        Prompts -> ImageGeneration;
+        Images -> CompareImages;
+        ImageGeneration -> CompareImages;
+        CompareImages -> FIDScores;
+        ImageGeneration -> FeaturesCosineSimilarities;
+        FeaturesCosineSimilarities -> FeaturesCosineSimilaritiesNCUT;
+        ImageGeneration -> AttentionWeights;
+        AttentionWeights -> AttentionWeightsHeatmap;
+        AttentionWeights -> AttentionWeightsNCUTUndirected;
+    }
+}

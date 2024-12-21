@@ -16,6 +16,10 @@ To calculate FID scores, you will need to install the additional [`pytorch-fid` 
 pip install pytorch-fid
 ```
 
+## Workflow
+
+![Project Workflow](./media/project_workflow.svg)
+
 ## Usage
 
 This section outlines the essential steps to prepare the dataset, fine-tune the model, calculate FID scores, and visualize attention weights. For a complete list of commands and options, use `sd3 --help` and `sd3 <command> --help`.

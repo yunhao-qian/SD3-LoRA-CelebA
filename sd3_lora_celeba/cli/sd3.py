@@ -26,7 +26,7 @@ from .visualize_attention_weights import visualize_attention_weights
     help="use rich text or plain text for logging",
 )
 def sd3(quiet: bool, logging_style: str) -> None:
-    """Command line tool for fine-tuning a Stable Diffusion 3 model."""
+    """Stable Diffusion 3 fine-tuning and feature visualization."""
     logging.basicConfig(
         format="%(message)s",
         datefmt="[%X]",
