@@ -6,6 +6,9 @@ from pathlib import Path
 from typing import Literal, NamedTuple
 
 import numpy as np
+import torch
+from matplotlib import pyplot as plt
+from ncut_pytorch import rgb_from_tsne_3d
 from PIL import Image, ImageDraw, ImageFont
 
 BBox = tuple[int, int, int, int]
@@ -171,6 +174,113 @@ class TextTokenAndImageVisualizer:
             t5_tokens=[],
             t5_token_colors=np.empty((0, 3)),
             image=Image.new("RGB", (256, 256), color="lightgray"),
+        )
+
+    def visualize_affinity_heatmap(
+        self,
+        clip_tokens: Sequence[str],
+        t5_tokens: Sequence[str],
+        affinity: torch.Tensor,
+        image: Image.Image | None = None,
+    ) -> Image.Image:
+        """Visualizes the affinities between tokens using a heatmap.
+
+        `affinity` has shape `(num_tokens,)` and is the row of the selected token in the
+        affinity matrix.
+        """
+
+        affinity = affinity.cpu().numpy()
+
+        def affinity_to_color(
+            affinity_values: np.ndarray, alpha: bool = False
+        ) -> np.ndarray:
+            """Converts the affinity values to colors."""
+
+            affinity_values -= affinity_values.min()
+            affinity_values /= affinity_values.max() + 1e-6
+            colors = plt.get_cmap("plasma")(affinity_values)
+            if alpha:
+                colors[:, 3] = affinity_values * 0.6 + 0.4  # 0.6 <= alpha <= 1.0
+            return (colors * 255).astype(np.uint8)
+
+        clip_token_colors = affinity_to_color(affinity[4096 : 4096 + len(clip_tokens)])
+        t5_token_colors = affinity_to_color(
+            affinity[4096 + 77 : 4096 + 77 + len(t5_tokens)]
+        )
+        overlay_colors = affinity_to_color(
+            affinity[0:4096], alpha=image is not None
+        ).reshape(64, 64, 4)
+        # Upsample (64, 64, 4) -> (1024, 1024, 4)
+        overlay_colors = np.repeat(overlay_colors, 16, axis=0)
+        overlay_colors = np.repeat(overlay_colors, 16, axis=1)
+        overlay = Image.fromarray(overlay_colors)
+
+        if image is None:
+            image = overlay
+        else:
+            image = Image.alpha_composite(image.convert("RGBA"), overlay)
+
+        return self.visualize_data(
+            clip_tokens, clip_token_colors, t5_tokens, t5_token_colors, image
+        )
+
+    def visualize_affinity_ncut(
+        self,
+        clip_tokens: Sequence[str],
+        t5_tokens: Sequence[str],
+        affinity: torch.Tensor,
+        image: Image.Image | None = None,
+        num_eigenvectors: int = 30,
+        device: str | torch.device | None = None,
+    ) -> Image.Image:
+        """Visualizes the affinities between tokens using NCUT.
+
+        `affinity` is the affinity matrix of shape `(num_tokens, num_tokens)`.
+        """
+
+        if device is None:
+            device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+        affinity = affinity.to(device, copy=True)
+        sqrt_diagonal = affinity.sum(dim=1).sqrt_()
+        affinity /= sqrt_diagonal[:, None]
+        affinity /= sqrt_diagonal[None, :]
+
+        eigenvectors, eigenvalues, _ = torch.svd_lowrank(affinity, q=num_eigenvectors)
+        eigenvectors = eigenvectors.real
+        eigenvalues = eigenvalues.real
+        sorted_indices = eigenvalues.argsort(descending=True)
+        eigenvectors = eigenvectors[:, sorted_indices]
+        eigenvalues = eigenvalues[sorted_indices]
+
+        eigenvector_signs = eigenvectors.sum(dim=0).sign()
+        eigenvectors *= eigenvector_signs
+
+        _, tsne_rgb = rgb_from_tsne_3d(eigenvectors, device=device)
+        ncut_colors = tsne_rgb.numpy()
+
+        clip_token_colors = ncut_colors[4096 : 4096 + len(clip_tokens)]
+        t5_token_colors = ncut_colors[4096 + 77 : 4096 + 77 + len(t5_tokens)]
+
+        overlay_colors = ncut_colors[0:4096].reshape(64, 64, 3)
+        if image is not None:
+            # Alpha = 0.7 for the overlay
+            overlay_colors = np.concatenate(
+                (overlay_colors, np.full((64, 64, 1), 0.7)), axis=2
+            )
+        overlay_colors = (overlay_colors * 255).astype(np.uint8)
+        # Upsample (64, 64, 4) -> (1024, 1024, 4)
+        overlay_colors = np.repeat(overlay_colors, 16, axis=0)
+        overlay_colors = np.repeat(overlay_colors, 16, axis=1)
+        overlay = Image.fromarray(overlay_colors)
+
+        if image is None:
+            image = overlay
+        else:
+            image = Image.alpha_composite(image.convert("RGBA"), overlay)
+
+        return self.visualize_data(
+            clip_tokens, clip_token_colors, t5_tokens, t5_token_colors, image
         )
 
     def get_token_index(self, x: float, y: float) -> int | None:
