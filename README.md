@@ -1,5 +1,32 @@
 # Stable Diffusion 3 Fine-Tuning and Feature Visualization
 
+## Workflow
+
+The flowchart below summarizes our project workflow. The dataset was derived from CelebA-HQ and CelebA, with prompts generated using BLIP-2 and Llama 3. Selected Transformer blocks of the model were fine-tuned with LoRA. We then analyzed the results quantitatively through FID scores and qualitatively using NCUT and heatmap visualizations.
+
+![Project Workflow](./media/project_workflow.svg)
+
+## Results
+
+### FID Scores
+
+We conducted three fine-tuning experiments using different means for the logit-normal distribution in timestep sampling. Images were generated with the pretrained model and the three fine-tuned models using prompts from the validation set, and their FID scores were calculated against the ground-truth images. The table below shows the results. The best FID score was 24.3, a significant improvement over the pretrained model's 80.0.
+
+| Model                      | BLIP-2 Captions | Llama 3.1 Captions |
+| -------------------------- | --------------- | ------------------ |
+| Pretrained                 | 80.0            | 88.2               |
+| Fine-Tuned with $m = -0.5$ | **24.3**        | 31.1               |
+| Fine-Tuned with $m = 0.0$  | 29.8            | 31.0               |
+| Fine-Tuned with $m = 0.5$  | 32.0            | 31.6               |
+
+The plot below shows how the validation set FID score changed over the training steps. The score improved steadily at first and plateaued around step 4000. The plot corresponds to our best fine-tuned model with $m = -0.5$.
+
+![FID Score vs. Step](./media/fid_score_vs_step.svg)
+
+To find the optimal inference setting, we adjusted the guidance scale from 1.0 to 7.0 and calculated the FID scores. The plot below shows the results, with the best FID score of 18.11 achieved at a guidance scale of 3.0.
+
+![FID Score vs. Guidance Scale](./media/fid_score_vs_guidance_scale.svg)
+
 ## Installation
 
 Clone this Git repository and install the package using pip:
@@ -15,10 +42,6 @@ To calculate FID scores, you will need to install the additional [`pytorch-fid` 
 ```bash
 pip install pytorch-fid
 ```
-
-## Workflow
-
-![Project Workflow](./media/project_workflow.svg)
 
 ## Usage
 

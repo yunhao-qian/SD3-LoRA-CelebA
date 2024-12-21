@@ -1,7 +1,7 @@
 digraph G {
     fontname="Sans-Serif";
-    fontsize=12;
-    node [shape=box style="filled,rounded" fontname="Sans-Serif" fontsize=12];
+    fontsize=10;
+    node [shape=box style="filled,rounded" margin=0 fontname="Sans-Serif" fontsize=10];
 
     subgraph cluster_0 {
         label="Dataset Preparation";
