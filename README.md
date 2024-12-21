@@ -12,7 +12,7 @@ The flowchart below summarizes our project workflow. The dataset was derived fro
 
 The following video illustrates how the generated images evolve throughout the training process. Notice that human images tend to zoom in on faces, and this behavior generalizes to cat faces as well. Additionally, unconditional generation often produces a human face.
 
-https://github.com/user-attachments/assets/d8c07d78-4276-4b31-a92b-61d9a127a1c2
+https://github.com/user-attachments/assets/cd6a737c-570f-4c97-a75a-a13700333e86
 
 ### FID Scores
 
