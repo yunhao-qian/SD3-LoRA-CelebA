@@ -303,7 +303,7 @@ class VisualizeAttentionWeight:
         lora_weight_dir: str | None,
         inference_step: int,
         transformer_blocks: Collection[int],
-        pipeline_args: dict[str, Any],
+        pipeline_kwargs: dict[str, Any],
     ) -> None:
         """Gets the generated image and the attention weight at the specified inference
         step and transformer blocks."""
@@ -313,7 +313,7 @@ class VisualizeAttentionWeight:
         if lora_weight_dir is not None:
             self.pipeline.load_lora_weights(lora_weight_dir)
 
-        def add_saved_attention_weight_attributes():
+        def add_hooks():
             for block_index, block in enumerate(
                 self.pipeline.transformer.transformer_blocks
             ):
@@ -339,15 +339,15 @@ class VisualizeAttentionWeight:
                 )
 
             if i == inference_step - 1:
-                add_saved_attention_weight_attributes()
+                add_hooks()
 
             return {}
 
         if inference_step == 0:
-            add_saved_attention_weight_attributes()
+            add_hooks()
 
         self.generated_image = self.pipeline(
-            **pipeline_args,
+            **pipeline_kwargs,
             callback_on_step_end=callback_on_step_end,
             callback_on_step_end_tensor_inputs=[],
         ).images[0]
@@ -409,7 +409,6 @@ class VisualizeAttentionWeight:
         )
         attention_weight = attention_weight + attention_weight.t()
         attention_weight /= 2
-        attention_weight /= attention_weight.sum(dim=1, keepdim=True)
         sqrt_diagonal = attention_weight.sum(dim=1).sqrt_()
         attention_weight /= sqrt_diagonal[:, None]
         attention_weight /= sqrt_diagonal[None, :]

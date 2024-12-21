@@ -108,13 +108,13 @@ class CaptionBLIP2:
 
         match self.args["precision"]:
             case "float32":
-                model_args = {}
+                model_kwargs = {}
                 self.input_dtype = torch.float32
             case "float16":
-                model_args = {"torch_dtype": torch.float16}
+                model_kwargs = {"torch_dtype": torch.float16}
                 self.input_dtype = torch.float16
             case "8bit":
-                model_args = {
+                model_kwargs = {
                     "quantization_config": {"load_in_8bit": True},
                     "torch_dtype": torch.float16,
                 }
@@ -134,7 +134,7 @@ class CaptionBLIP2:
         self.model = Blip2ForConditionalGeneration.from_pretrained(
             self.args["model_name"],
             revision=self.args["model_revision"],
-            **model_args,
+            **model_kwargs,
             device_map={"": 0},
         )
 
