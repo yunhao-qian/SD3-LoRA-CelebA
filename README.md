@@ -37,6 +37,8 @@ To find the optimal inference setting, we adjusted the guidance scale from 1.0 t
 
 ![FID Score vs. Guidance Scale](./images/fid_score_vs_guidance_scale.svg)
 
+Using the best fine-tuned model and inference settings identified on the validation set, we repeated the comparison on the test set. The pretrained model achieved an FID score of 78.8, while the fine-tuned model significantly improved to 18.38.
+
 ### Feature Visualization
 
 When the CLIP token "lips" is selected in the first prompt, it highlights not only the woman's lips in the first image but also the man's and the cat's lips in the second and third images, respectively.
