@@ -18,8 +18,8 @@ TypesetOutput = tuple[BBox, TokenID]
 class VisualizerConfig(NamedTuple):
     """Configuration for the visualizer class."""
 
-    figure_width: int = 1104
-    figure_padding: int = 40
+    figure_width: int = 1184
+    figure_padding: int = 80
     token_spacing: int = 20
     line_spacing: int = 70
     font_path: str | None = None

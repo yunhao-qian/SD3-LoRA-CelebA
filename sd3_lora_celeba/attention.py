@@ -105,9 +105,7 @@ def generate_image_and_get_affinity(
         )
         component /= component.norm(dim=-1, keepdim=True)
         # [-1, 1] -> [0, 2]
-        affinity = (component @ component.t()).neg_().add_(1)
-        index_range = torch.arange(affinity.size(0))
-        affinity[index_range, index_range] = 0
+        affinity = (component @ component.t()).add_(1)
     else:
         queries = attention_components["query"].to(pipeline.device)
         keys = attention_components["key"].to(pipeline.device)
@@ -119,10 +117,9 @@ def generate_image_and_get_affinity(
             attention_weight += (
                 (query @ key.t()).mul_(scale_factor).softmax(dim=-1).div_(num_heads)
             )
+        affinity = attention_weight
 
-        affinity = attention_weight.cpu()
-
-    return generated_images, affinity
+    return generated_images, affinity.cpu()
 
 
 AttentionComponentName = Literal["query", "key", "value", "output"]

@@ -15,6 +15,7 @@ from .generate_images import generate_images
 from .prepare_celeba import prepare_celeba
 from .prepare_celeba_hq import prepare_celeba_hq
 from .visualize_attention_weights import visualize_attention_weights
+from .visualize_token_affinities import visualize_token_affinities
 
 
 @click.group()
@@ -45,3 +46,4 @@ sd3.add_command(fine_tune)
 sd3.add_command(copy_images)
 sd3.add_command(generate_images)
 sd3.add_command(visualize_attention_weights)
+sd3.add_command(visualize_token_affinities)
