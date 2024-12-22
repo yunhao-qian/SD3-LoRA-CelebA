@@ -1,2 +1,2 @@
-# Reclassify `.ipynb` files as Python in GitHub Linguist.
-*.ipynb linguist-language=Python
+# Exclude Jupyter Notebooks from GitHub Linguist.
+notebooks/*.ipynb linguist-generated=true
