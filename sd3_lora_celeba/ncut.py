@@ -2,7 +2,7 @@
 
 import numpy as np
 import torch
-from ncut_pytorch import rgb_from_cosine_tsne_3d
+from ncut_pytorch import rgb_from_tsne_3d
 
 
 def get_ncut_eigenvectors(
@@ -52,7 +52,7 @@ def get_ncut_colors(
 
     eigenvectors = get_ncut_eigenvectors(affinity, num_eigenvectors, device)
 
-    _, tsne_rgb = rgb_from_cosine_tsne_3d(eigenvectors, device=device)
+    _, tsne_rgb = rgb_from_tsne_3d(eigenvectors, device=device)
     ncut_colors = tsne_rgb.numpy()
 
     return ncut_colors
