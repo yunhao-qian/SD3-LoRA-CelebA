@@ -49,6 +49,20 @@ To calculate FID scores, you will need to install the additional [`pytorch-fid` 
 pip install pytorch-fid
 ```
 
+### Feature Visualization
+
+When the CLIP token "lips" is selected in the first prompt, it highlights not only the woman's lips in the first image but also the man's and the cat's lips in the second and third images, respectively.
+
+![Heatmap of Tokens Matching the Text Token "lips"](./images/heatmap_woman_lips.webp)
+
+When one of the cat's eyes is selected in the third image, the heatmap highlights the eyes across all three images. Additionally, two areas above the human eyes in the first two images are highlighted due to positional encoding.
+
+![Heatmap of Tokens Matching an Image Patch on a Cat's Eye](./images/heatmap_cat_eye.webp)
+
+In the following NCUT visualization, tokens with similar semantics are assigned similar colors, with this matching occurring both across modalities and across images.
+
+![NCUT Visualization of Token Affinities](./images/ncut.webp)
+
 ## Usage
 
 This section outlines the essential steps to prepare the dataset, fine-tune the model, calculate FID scores, and visualize token affinities. For a complete list of commands and options, use `sd3 --help` and `sd3 <command> --help`.
