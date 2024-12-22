@@ -120,8 +120,7 @@ def generate_image_and_get_affinity(
                 (query @ key.t()).mul_(scale_factor).softmax(dim=-1).div_(num_heads)
             )
 
-        # Make the affinity matrix symmetric.
-        affinity = (attention_weight + attention_weight.t()).div_(2).cpu()
+        affinity = attention_weight.cpu()
 
     return generated_images, affinity
 
