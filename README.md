@@ -37,6 +37,20 @@ To find the optimal inference setting, we adjusted the guidance scale from 1.0 t
 
 ![FID Score vs. Guidance Scale](./images/fid_score_vs_guidance_scale.svg)
 
+### Feature Visualization
+
+When the CLIP token "lips" is selected in the first prompt, it highlights not only the woman's lips in the first image but also the man's and the cat's lips in the second and third images, respectively.
+
+![Heatmap of Tokens Matching the Text Token "lips"](./images/heatmap_woman_lips.webp)
+
+When one of the cat's eyes is selected in the third image, the heatmap highlights the eyes across all three images. Additionally, two areas above the human eyes in the first two images are highlighted due to positional encoding.
+
+![Heatmap of Tokens Matching an Image Patch on a Cat's Eye](./images/heatmap_cat_eye.webp)
+
+In the following NCUT visualization, tokens with high attention weight affinities are assigned similar colors, revealing correspondences across modalities and images. For short prompts, as shown in this example, the image-text correspondence is strong for CLIP tokens but weaker for T5 tokens.
+
+![NCUT Visualization of Token Affinities](./images/ncut.png)
+
 ## Installation
 
 Clone this Git repository and install the package using pip:
@@ -52,20 +66,6 @@ To calculate FID scores, you will need to install the additional [`pytorch-fid` 
 ```bash
 pip install pytorch-fid
 ```
-
-### Feature Visualization
-
-When the CLIP token "lips" is selected in the first prompt, it highlights not only the woman's lips in the first image but also the man's and the cat's lips in the second and third images, respectively.
-
-![Heatmap of Tokens Matching the Text Token "lips"](./images/heatmap_woman_lips.webp)
-
-When one of the cat's eyes is selected in the third image, the heatmap highlights the eyes across all three images. Additionally, two areas above the human eyes in the first two images are highlighted due to positional encoding.
-
-![Heatmap of Tokens Matching an Image Patch on a Cat's Eye](./images/heatmap_cat_eye.webp)
-
-In the following NCUT visualization, tokens with high attention weight affinities are assigned similar colors, revealing correspondences across modalities and images. Notably, the image-text alignment is strong for CLIP tokens but weaker for T5 tokens.
-
-![NCUT Visualization of Token Affinities](./images/ncut.png)
 
 ## Usage
 
