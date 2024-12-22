@@ -15,7 +15,7 @@ from PIL import Image
 from ..attention import generate_image_and_get_affinity
 from ..ncut import get_ncut_eigenvectors
 from ..prompt import get_prompt_tokens
-from ..visualizer_new import MultiPromptAndImageVisualizer, VisualizerData
+from ..visualizer import MultiPromptAndImageVisualizer, VisualizerData
 
 _logger = logging.getLogger(__name__)
 

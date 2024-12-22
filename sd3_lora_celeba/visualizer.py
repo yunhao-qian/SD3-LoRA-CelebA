@@ -1,16 +1,13 @@
-"""Implementation of the TextTokenAndImageVisualizer class."""
+"""Visualizer classes for visualizing prompts and images."""
 
 import itertools
 from collections.abc import Generator, Iterable, Sequence
 from pathlib import Path
 from typing import Literal, NamedTuple
 
+import more_itertools
 import numpy as np
-import torch
-from matplotlib import pyplot as plt
 from PIL import Image, ImageDraw, ImageFont
-
-from .ncut import get_ncut_colors
 
 BBox = tuple[int, int, int, int]
 TokenID = Literal["clip_heading", "t5_heading"] | int
@@ -18,22 +15,45 @@ TypesetInput = tuple[str, ImageFont.FreeTypeFont, TokenID] | Literal["\n", " "]
 TypesetOutput = tuple[BBox, TokenID]
 
 
-class TextTokenAndImageVisualizer:
+class VisualizerConfig(NamedTuple):
+    """Configuration for the visualizer class."""
+
+    figure_width: int = 1184
+    figure_padding: int = 80
+    token_spacing: int = 20
+    line_spacing: int = 70
+    font_path: str | None = None
+    heading_font_size: int = 50
+    text_token_font_size: int = 40
+    text_token_corner_radius: int = 8
+
+
+class VisualizerData(NamedTuple):
+    """Data to visualize for a single figure."""
+
+    clip_tokens: Sequence[str]
+    """A sequence of CLIP token strings."""
+
+    clip_token_colors: np.ndarray
+    """RGB/RGBA colors of shape `(num_tokens, 3|4)`."""
+
+    t5_tokens: Sequence[str]
+    """A sequence of T5 token strings."""
+
+    t5_token_colors: np.ndarray
+    """RGB/RGBA colors of shape `(num_tokens, 3|4)`."""
+
+    image: Image.Image | None
+    """An 1024x1024 image to visualize."""
+
+    overlay_colors: np.ndarray | None
+    """An 64x64 overlay to the image."""
+
+
+class PromptAndImageVisualizer:
     """A class to visualize text tokens and an image together in a single figure."""
 
-    class Config(NamedTuple):
-        """Configuration for the visualizer class."""
-
-        figure_width: int = 2560
-        figure_padding: int = 80
-        token_spacing: int = 30
-        line_spacing: int = 90
-        font_path: str | None = None
-        heading_font_size: int = 64
-        text_token_font_size: int = 56
-        text_token_corner_radius: int = 10
-
-    def __init__(self, config: Config = Config()) -> None:
+    def __init__(self, config: VisualizerConfig = VisualizerConfig()) -> None:
         self._config = config
 
         font_path = config.font_path
@@ -53,35 +73,15 @@ class TextTokenAndImageVisualizer:
 
         return self._config.figure_width - 2 * self._config.figure_padding
 
-    def visualize_data(
-        self,
-        clip_tokens: Sequence[str],
-        clip_token_colors: np.ndarray,
-        t5_tokens: Sequence[str],
-        t5_token_colors: np.ndarray,
-        image: Image.Image | None = None,
-        overlay_colors: np.ndarray | None = None,
-    ) -> None:
-        """Visualizes the text tokens and the image.
-
-        Args:
-            clip_tokens: A sequence of CLIP token strings.
-            clip_token_colors: RGB/RGBA colors of shape `(num_tokens, 3|4)`.
-            t5_tokens: A sequence of T5 token strings.
-            t5_token_colors: RGB/RGBA colors of shape `(num_tokens, 3|4)`.
-            image: An 1024x1024 image to visualize.
-            overlay_colors: An 64x64 overlay to the image.
-
-        Returns:
-            The visualized figure.
-        """
+    def visualize_data(self, data: VisualizerData) -> Image.Image:
+        """Visualizes the text tokens and the image."""
 
         inputs: list[TypesetInput] = []
 
         clip_heading = "CLIP tokens:"
         inputs.append((clip_heading, self._heading_font, "clip_heading"))
         inputs.append("\n")
-        for i, token_str in enumerate(clip_tokens):
+        for i, token_str in enumerate(data.clip_tokens):
             if i > 0:
                 inputs.append(" ")
             token_index = 4096 + i
@@ -91,12 +91,11 @@ class TextTokenAndImageVisualizer:
         t5_heading = "T5 tokens:"
         inputs.append((t5_heading, self._heading_font, "t5_heading"))
         inputs.append("\n")
-        for i, token_str in enumerate(t5_tokens):
+        for i, token_str in enumerate(data.t5_tokens):
             if i > 0:
                 inputs.append(" ")
             token_index = 4096 + 77 + i
             inputs.append((token_str, self._text_token_font, token_index))
-        inputs.append("\n")
 
         typeset_iter = self._typeset(inputs)
 
@@ -120,11 +119,11 @@ class TextTokenAndImageVisualizer:
             else:
                 self._text_token_bboxes[token_id] = bbox
 
-        if overlay_colors is None:
+        if data.overlay_colors is None:
             overlay = None
         else:
-            assert overlay_colors.shape[0:2] == (64, 64)
-            overlay_colors = self._to_uint8_colors(overlay_colors)
+            assert data.overlay_colors.shape[0:2] == (64, 64)
+            overlay_colors = self._to_uint8_colors(data.overlay_colors)
 
             # Upsample (64, 64, 3|4) -> (1024, 1024, 3|4)
             overlay_colors = np.repeat(overlay_colors, 16, axis=0)
@@ -133,8 +132,10 @@ class TextTokenAndImageVisualizer:
             overlay = Image.fromarray(overlay_colors)
 
         # Apply the overlay to the image.
-        if image is not None:
+        if data.image is not None:
+            image = data.image
             assert image.size == (1024, 1024)
+
             if overlay is not None:
                 image = Image.alpha_composite(
                     image.convert("RGBA"), overlay.convert("RGBA")
@@ -169,13 +170,13 @@ class TextTokenAndImageVisualizer:
         )
 
         # Pillow accepts only 8-bit color values.
-        clip_token_colors = self._to_uint8_colors(clip_token_colors)
-        t5_token_colors = self._to_uint8_colors(t5_token_colors)
+        clip_token_colors = self._to_uint8_colors(data.clip_token_colors)
+        t5_token_colors = self._to_uint8_colors(data.t5_token_colors)
 
         # Draw the tokens with colored backgrounds.
         for token_index, (token_str, token_color) in itertools.chain(
-            enumerate(zip(clip_tokens, clip_token_colors), start=4096),
-            enumerate(zip(t5_tokens, t5_token_colors), start=4096 + 77),
+            enumerate(zip(data.clip_tokens, clip_token_colors), start=4096),
+            enumerate(zip(data.t5_tokens, t5_token_colors), start=4096 + 77),
         ):
             bbox = self._text_token_bboxes[token_index]
             draw.rounded_rectangle(
@@ -191,95 +192,6 @@ class TextTokenAndImageVisualizer:
             )
 
         return figure
-
-    def visualize_empty_data(self) -> Image.Image:
-        """Visualizes an empty figure."""
-
-        return self.visualize_data(
-            clip_tokens=[],
-            clip_token_colors=np.empty((0, 3)),
-            t5_tokens=[],
-            t5_token_colors=np.empty((0, 3)),
-        )
-
-    def visualize_affinity_heatmap(
-        self,
-        clip_tokens: Sequence[str],
-        t5_tokens: Sequence[str],
-        affinity: torch.Tensor,
-        image: Image.Image | None = None,
-    ) -> Image.Image:
-        """Visualizes the affinities between tokens using a heatmap.
-
-        `affinity` has shape `(num_tokens,)` and is the row of the selected token in the
-        affinity matrix.
-        """
-
-        affinity = affinity.cpu().numpy()
-
-        def affinity_to_color(
-            affinity_values: np.ndarray, alpha: bool = False
-        ) -> np.ndarray:
-            """Converts the affinity values to colors."""
-
-            affinity_values -= affinity_values.min()
-            affinity_values /= affinity_values.max() + 1e-6
-            colors = plt.get_cmap("plasma")(affinity_values)
-            if alpha:
-                colors[:, 3] = affinity_values * 0.6 + 0.4  # 0.6 <= alpha <= 1.0
-            return (colors * 255).astype(np.uint8)
-
-        clip_token_colors = affinity_to_color(affinity[4096 : 4096 + len(clip_tokens)])
-        t5_token_colors = affinity_to_color(
-            affinity[4096 + 77 : 4096 + 77 + len(t5_tokens)]
-        )
-        overlay_colors = affinity_to_color(
-            affinity[0:4096], alpha=image is not None
-        ).reshape(64, 64, 4)
-
-        return self.visualize_data(
-            clip_tokens,
-            clip_token_colors,
-            t5_tokens,
-            t5_token_colors,
-            image,
-            overlay_colors,
-        )
-
-    def visualize_affinity_ncut(
-        self,
-        clip_tokens: Sequence[str],
-        t5_tokens: Sequence[str],
-        affinity: torch.Tensor,
-        image: Image.Image | None = None,
-        num_eigenvectors: int = 30,
-        device: str | torch.device | None = None,
-    ) -> Image.Image:
-        """Visualizes the affinities between tokens using NCUT.
-
-        `affinity` is the affinity matrix of shape `(num_tokens, num_tokens)`.
-        """
-
-        ncut_colors = get_ncut_colors(affinity, num_eigenvectors, device)
-
-        clip_token_colors = ncut_colors[4096 : 4096 + len(clip_tokens)]
-        t5_token_colors = ncut_colors[4096 + 77 : 4096 + 77 + len(t5_tokens)]
-
-        overlay_colors = ncut_colors[0:4096].reshape(64, 64, 3)
-        if image is not None:
-            # Alpha = 0.7 for the overlay
-            overlay_colors = np.concatenate(
-                (overlay_colors, np.full((64, 64, 1), 0.7)), axis=2
-            )
-
-        return self.visualize_data(
-            clip_tokens,
-            clip_token_colors,
-            t5_tokens,
-            t5_token_colors,
-            image,
-            overlay_colors,
-        )
 
     def get_token_index(self, x: float, y: float) -> int | None:
         """Gets the index of the text of image token at the given position.
@@ -372,3 +284,88 @@ class TextTokenAndImageVisualizer:
 
         # Use black for light backgrounds and white for dark backgrounds.
         return "black" if brightness >= 0.5 else "white"
+
+
+class MultiPromptAndImageVisualizer:
+    """A wrapper around `PromptAndImageVisualizer` to display multiple figures
+    together."""
+
+    def __init__(
+        self, config: VisualizerConfig = VisualizerConfig(), subfigures_per_row: int = 3
+    ) -> None:
+        self._config = config
+        self._subfigures_per_row = subfigures_per_row
+
+        self._visualizers: list[PromptAndImageVisualizer] = []
+        self._subfigure_bboxes: list[BBox] = []
+
+    def visualize_data(self, data: Sequence[VisualizerData]) -> Image.Image:
+        """Visualizes the text tokens and images for multiple subfigures."""
+
+        self._visualizers = []
+        subfigures: list[Image.Image] = []
+        for subfigure_data in data:
+            visualizer = PromptAndImageVisualizer(self._config)
+            self._visualizers.append(visualizer)
+
+            subfigure = visualizer.visualize_data(subfigure_data)
+            subfigures.append(subfigure)
+
+        figure_width = 0
+
+        # Calculate the bounding boxes of the subfigures.
+        self._subfigure_bboxes = []
+        y = 0
+        for subfigure_row in more_itertools.chunked(
+            subfigures, self._subfigures_per_row
+        ):
+            x = 0
+            row_height = max(subfigure.height for subfigure in subfigure_row)
+            for subfigure in subfigure_row:
+                self._subfigure_bboxes.append(
+                    (
+                        x,
+                        y + row_height - subfigure.height,
+                        x + subfigure.width,
+                        y + row_height,
+                    )
+                )
+                x += subfigure.width
+            figure_width = max(figure_width, x)
+            y += row_height
+
+        figure_height = y
+        figure = Image.new("RGB", (figure_width, figure_height), color="white")
+
+        for subfigure, bbox in zip(subfigures, self._subfigure_bboxes):
+            figure.paste(subfigure, bbox[:2])
+
+        return figure
+
+    def get_subfigure_and_token_index(
+        self, x: float, y: float
+    ) -> tuple[int, int] | None:
+        """Gets which subfigure and which token is at the given position.
+
+        Args:
+            x: The x coordinate of the position.
+            y: The y coordinate of the position.
+
+        Returns:
+            `(subfigure_index, token_index)` if the position is within the bounding box
+            of a text token or an image patch, or `None` if otherwise.
+        """
+
+        for subfigure_index, (x_min, y_min, x_max, y_max) in enumerate(
+            self._subfigure_bboxes
+        ):
+            if not (x_min <= x < x_max and y_min <= y < y_max):
+                continue
+
+            visualizer = self._visualizers[subfigure_index]
+            token_index = visualizer.get_token_index(x - x_min, y - y_min)
+            if token_index is None:
+                return None
+            return subfigure_index, token_index
+
+        return None
