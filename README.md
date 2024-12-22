@@ -63,9 +63,9 @@ When one of the cat's eyes is selected in the third image, the heatmap highlight
 
 ![Heatmap of Tokens Matching an Image Patch on a Cat's Eye](./images/heatmap_cat_eye.webp)
 
-In the following NCUT visualization, tokens with similar semantics are assigned similar colors, with this matching occurring both across modalities and across images.
+In the following NCUT visualization, tokens with high attention weight affinities are assigned similar colors, revealing correspondences across modalities and images. Notably, the image-text alignment is strong for CLIP tokens but weaker for T5 tokens.
 
-![NCUT Visualization of Token Affinities](./images/ncut.webp)
+![NCUT Visualization of Token Affinities](./images/ncut.png)
 
 ## Usage
 

@@ -25,6 +25,8 @@ def get_ncut_eigenvectors(
     affinity /= sqrt_diagonal[:, None]
     affinity /= sqrt_diagonal[None, :]
 
+    affinity.sub_(affinity.max()).exp_()
+
     eigenvectors, eigenvalues, _ = torch.svd_lowrank(affinity, q=num_eigenvectors)
     eigenvectors = eigenvectors.real
     eigenvalues = eigenvalues.real

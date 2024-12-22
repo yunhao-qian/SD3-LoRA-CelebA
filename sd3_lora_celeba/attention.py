@@ -103,7 +103,7 @@ def generate_image_and_get_affinity(
             .flatten(start_dim=1)
             .to(pipeline.device, torch.float32)
         )
-        component /= component.norm(dim=-1, keepdim=True)
+        component /= component.norm(dim=-1, keepdim=True).clamp_min_(1e-12)
         # [-1, 1] -> [0, 2]
         affinity = (component @ component.t()).add_(1)
     else:

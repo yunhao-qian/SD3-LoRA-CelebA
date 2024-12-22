@@ -325,19 +325,14 @@ class VisualizeTokenAffinities:
         ncut_colors = np.split(tsne_rgb.numpy(), len(self.text_tokens))
 
         visualizer_data = []
-        for (clip_tokens, t5_tokens), generated_image, example_ncut_colors in zip(
-            self.text_tokens, self.generated_images, ncut_colors
+        for (clip_tokens, t5_tokens), example_ncut_colors in zip(
+            self.text_tokens, ncut_colors
         ):
             clip_token_colors = example_ncut_colors[4096 : 4096 + len(clip_tokens)]
             t5_token_colors = example_ncut_colors[
                 4096 + 77 : 4096 + 77 + len(t5_tokens)
             ]
-
             overlay_colors = example_ncut_colors[0:4096].reshape(64, 64, 3)
-            # Alpha = 0.7
-            overlay_colors = np.concatenate(
-                (overlay_colors, np.full((64, 64, 1), 0.7)), axis=2
-            )
 
             visualizer_data.append(
                 VisualizerData(
@@ -345,8 +340,8 @@ class VisualizeTokenAffinities:
                     clip_token_colors,
                     t5_tokens,
                     t5_token_colors,
-                    generated_image,
-                    overlay_colors,
+                    image=None,
+                    overlay_colors=overlay_colors,
                 )
             )
 
