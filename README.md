@@ -2,9 +2,9 @@
 
 ## Workflow
 
-The flowchart below summarizes our project workflow. The dataset was derived from CelebA-HQ and CelebA, with prompts generated using BLIP-2 and Llama 3. Selected Transformer blocks of the model were fine-tuned with LoRA. We then analyzed the results quantitatively through FID scores and qualitatively using NCUT and heatmap visualizations.
+The flowchart below summarizes our project workflow. The dataset was derived from CelebA-HQ and CelebA, with prompts generated using BLIP-2 and Llama 3. Selected Transformer blocks of the model were fine-tuned with LoRA. We then analyzed the results quantitatively through FID scores and qualitatively using heatmap and NCUT visualizations.
 
-![Project Workflow](./media/project_workflow.svg)
+![Project Workflow](./images/project_workflow.svg)
 
 ## Results
 
@@ -27,11 +27,11 @@ We conducted three fine-tuning experiments using different means for the logit-n
 
 The plot below shows how the validation set FID score changed over the training steps. The score improved steadily at first and plateaued around step 4000. The plot corresponds to our best fine-tuned model with $m = -0.5$.
 
-![FID Score vs. Step](./media/fid_score_vs_step.svg)
+![FID Score vs. Step](./images/fid_score_vs_step.svg)
 
 To find the optimal inference setting, we adjusted the guidance scale from 1.0 to 7.0 and calculated the FID scores. The plot below shows the results, with the best FID score of 18.11 achieved at a guidance scale of 3.0.
 
-![FID Score vs. Guidance Scale](./media/fid_score_vs_guidance_scale.svg)
+![FID Score vs. Guidance Scale](./images/fid_score_vs_guidance_scale.svg)
 
 ## Installation
 
@@ -51,7 +51,7 @@ pip install pytorch-fid
 
 ## Usage
 
-This section outlines the essential steps to prepare the dataset, fine-tune the model, calculate FID scores, and visualize attention weights. For a complete list of commands and options, use `sd3 --help` and `sd3 <command> --help`.
+This section outlines the essential steps to prepare the dataset, fine-tune the model, calculate FID scores, and visualize token affinities. For a complete list of commands and options, use `sd3 --help` and `sd3 <command> --help`.
 
 ### Download and Prepare the Datasets
 
@@ -168,12 +168,12 @@ pytorch-fid /path/to/fid/ground-truth/stats.npz /path/to/fid/pretrained/stats.np
 pytorch-fid /path/to/fid/ground-truth/stats.npz /path/to/fid/fine-tuned/stats.npz
 ```
 
-### Attention Weight Visualization
+### Token Affinity Visualization
 
-The following command starts a Gradio app that visualizes the attention weights using heatmaps and NCUT:
+The following command starts a Gradio app that visualizes token affinities using heatmaps and NCUT:
 
 ```bash
-sd3 visualize-attention-weights \
+sd3 visualize-token-affinities \
     --lora-weight-dir /path/to/lora/checkpoint-1 \
     --lora-weight-dir /path/to/lora/checkpoint-2
 ```

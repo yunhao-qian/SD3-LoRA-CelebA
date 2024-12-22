@@ -5,11 +5,11 @@ digraph G {
 
     subgraph cluster_0 {
         label="Dataset Preparation";
-        node [fillcolor="#F8CECC", color="#B85450"]
+        node [fillcolor="#F8CECC", color="#B85450"];
 
         CelebAHQ [label="CelebA-HQ"];
         CelebA [label="CelebA"];
-        FilterCropCelebA [label="Filter, Crop", shape=ellipse]
+        FilterCropCelebA [label="Filter, Crop", shape=ellipse];
         MergeCelebA [label="Merge" shape=ellipse];
         Images [label="Images"];
         BinaryAttributes [label="Binary Attributes"];
@@ -37,7 +37,7 @@ digraph G {
 
     subgraph cluster_1 {
         label="Fine-Tuning";
-        node [fillcolor="#D5E8D4", color="#82B366"]
+        node [fillcolor="#D5E8D4", color="#82B366"];
 
         PretrainedModel [label="Pretrained Model"];
         MeanAblationExperiments [label="Mean Ablation Experiments"];
@@ -57,16 +57,15 @@ digraph G {
 
     subgraph cluster_2 {
         label="Result Analysis";
-        node [fillcolor="#DAE8FC", color="#6C8EBF"]
+        node [fillcolor="#DAE8FC", color="#6C8EBF"];
 
         ImageGeneration [label="Image Generation"];
         CompareImages [label="Compare" shape=ellipse];
         FIDScores [label="FID Scores"];
-        FeaturesCosineSimilarities [label="Features' Cosine Similarities"]
-        FeaturesCosineSimilaritiesNCUT [label="NCUT"];
-        AttentionWeights [label="Attention Weights"];
-        AttentionWeightsHeatmap [label="Heatmap"];
-        AttentionWeightsNCUTUndirected [label="NCUT Undirected"];
+        AttentionComponents [label="Attention Components"];
+        TokenAffinityVisualizations [label="Token Affinity Visualizations"];
+        Heatmap [label="Heatmap"];
+        NCUT [label="NCUT"];
 
         PretrainedModel -> ImageGeneration;
         FineTunedModel -> ImageGeneration;
@@ -74,10 +73,9 @@ digraph G {
         Images -> CompareImages;
         ImageGeneration -> CompareImages;
         CompareImages -> FIDScores;
-        ImageGeneration -> FeaturesCosineSimilarities;
-        FeaturesCosineSimilarities -> FeaturesCosineSimilaritiesNCUT;
-        ImageGeneration -> AttentionWeights;
-        AttentionWeights -> AttentionWeightsHeatmap;
-        AttentionWeights -> AttentionWeightsNCUTUndirected;
+        ImageGeneration -> AttentionComponents;
+        AttentionComponents -> TokenAffinityVisualizations;
+        TokenAffinityVisualizations -> Heatmap;
+        TokenAffinityVisualizations -> NCUT;
     }
 }
