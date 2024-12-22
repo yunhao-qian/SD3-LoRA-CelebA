@@ -8,8 +8,9 @@ from typing import Literal, NamedTuple
 import numpy as np
 import torch
 from matplotlib import pyplot as plt
-from ncut_pytorch import rgb_from_tsne_3d
 from PIL import Image, ImageDraw, ImageFont
+
+from .ncut import get_ncut_colors
 
 BBox = tuple[int, int, int, int]
 TokenID = Literal["clip_heading", "t5_heading"] | int
@@ -58,7 +59,8 @@ class TextTokenAndImageVisualizer:
         clip_token_colors: np.ndarray,
         t5_tokens: Sequence[str],
         t5_token_colors: np.ndarray,
-        image: Image.Image,
+        image: Image.Image | None = None,
+        overlay_colors: np.ndarray | None = None,
     ) -> None:
         """Visualizes the text tokens and the image.
 
@@ -67,7 +69,8 @@ class TextTokenAndImageVisualizer:
             clip_token_colors: RGB/RGBA colors of shape `(num_tokens, 3|4)`.
             t5_tokens: A sequence of T5 token strings.
             t5_token_colors: RGB/RGBA colors of shape `(num_tokens, 3|4)`.
-            image: The image to visualize.
+            image: An 1024x1024 image to visualize.
+            overlay_colors: An 64x64 overlay to the image.
 
         Returns:
             The visualized figure.
@@ -116,6 +119,30 @@ class TextTokenAndImageVisualizer:
                 t5_heading_bbox = bbox
             else:
                 self._text_token_bboxes[token_id] = bbox
+
+        if overlay_colors is None:
+            overlay = None
+        else:
+            assert overlay_colors.shape[0:2] == (64, 64)
+            overlay_colors = self._to_uint8_colors(overlay_colors)
+
+            # Upsample (64, 64, 3|4) -> (1024, 1024, 3|4)
+            overlay_colors = np.repeat(overlay_colors, 16, axis=0)
+            overlay_colors = np.repeat(overlay_colors, 16, axis=1)
+
+            overlay = Image.fromarray(overlay_colors)
+
+        # Apply the overlay to the image.
+        if image is not None:
+            assert image.size == (1024, 1024)
+            if overlay is not None:
+                image = Image.alpha_composite(
+                    image.convert("RGBA"), overlay.convert("RGBA")
+                )
+        elif overlay is not None:
+            image = overlay
+        else:
+            image = Image.new("RGB", (1024, 1024), color="lightgray")
 
         image_size = self.image_size
         image = image.resize((image_size, image_size))
@@ -173,7 +200,6 @@ class TextTokenAndImageVisualizer:
             clip_token_colors=np.empty((0, 3)),
             t5_tokens=[],
             t5_token_colors=np.empty((0, 3)),
-            image=Image.new("RGB", (256, 256), color="lightgray"),
         )
 
     def visualize_affinity_heatmap(
@@ -210,18 +236,14 @@ class TextTokenAndImageVisualizer:
         overlay_colors = affinity_to_color(
             affinity[0:4096], alpha=image is not None
         ).reshape(64, 64, 4)
-        # Upsample (64, 64, 4) -> (1024, 1024, 4)
-        overlay_colors = np.repeat(overlay_colors, 16, axis=0)
-        overlay_colors = np.repeat(overlay_colors, 16, axis=1)
-        overlay = Image.fromarray(overlay_colors)
-
-        if image is None:
-            image = overlay
-        else:
-            image = Image.alpha_composite(image.convert("RGBA"), overlay)
 
         return self.visualize_data(
-            clip_tokens, clip_token_colors, t5_tokens, t5_token_colors, image
+            clip_tokens,
+            clip_token_colors,
+            t5_tokens,
+            t5_token_colors,
+            image,
+            overlay_colors,
         )
 
     def visualize_affinity_ncut(
@@ -238,26 +260,7 @@ class TextTokenAndImageVisualizer:
         `affinity` is the affinity matrix of shape `(num_tokens, num_tokens)`.
         """
 
-        if device is None:
-            device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-        affinity = affinity.to(device, copy=True)
-        sqrt_diagonal = affinity.sum(dim=1).sqrt_()
-        affinity /= sqrt_diagonal[:, None]
-        affinity /= sqrt_diagonal[None, :]
-
-        eigenvectors, eigenvalues, _ = torch.svd_lowrank(affinity, q=num_eigenvectors)
-        eigenvectors = eigenvectors.real
-        eigenvalues = eigenvalues.real
-        sorted_indices = eigenvalues.argsort(descending=True)
-        eigenvectors = eigenvectors[:, sorted_indices]
-        eigenvalues = eigenvalues[sorted_indices]
-
-        eigenvector_signs = eigenvectors.sum(dim=0).sign()
-        eigenvectors *= eigenvector_signs
-
-        _, tsne_rgb = rgb_from_tsne_3d(eigenvectors, device=device)
-        ncut_colors = tsne_rgb.numpy()
+        ncut_colors = get_ncut_colors(affinity, num_eigenvectors, device)
 
         clip_token_colors = ncut_colors[4096 : 4096 + len(clip_tokens)]
         t5_token_colors = ncut_colors[4096 + 77 : 4096 + 77 + len(t5_tokens)]
@@ -268,19 +271,14 @@ class TextTokenAndImageVisualizer:
             overlay_colors = np.concatenate(
                 (overlay_colors, np.full((64, 64, 1), 0.7)), axis=2
             )
-        overlay_colors = (overlay_colors * 255).astype(np.uint8)
-        # Upsample (64, 64, 4) -> (1024, 1024, 4)
-        overlay_colors = np.repeat(overlay_colors, 16, axis=0)
-        overlay_colors = np.repeat(overlay_colors, 16, axis=1)
-        overlay = Image.fromarray(overlay_colors)
-
-        if image is None:
-            image = overlay
-        else:
-            image = Image.alpha_composite(image.convert("RGBA"), overlay)
 
         return self.visualize_data(
-            clip_tokens, clip_token_colors, t5_tokens, t5_token_colors, image
+            clip_tokens,
+            clip_token_colors,
+            t5_tokens,
+            t5_token_colors,
+            image,
+            overlay_colors,
         )
 
     def get_token_index(self, x: float, y: float) -> int | None:

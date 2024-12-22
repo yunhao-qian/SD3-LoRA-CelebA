@@ -109,8 +109,8 @@ def generate_image_and_get_affinity(
         index_range = torch.arange(affinity.size(0))
         affinity[index_range, index_range] = 0
     else:
-        queries = attention_components["query"]
-        keys = attention_components["key"]
+        queries = attention_components["query"].to(pipeline.device)
+        keys = attention_components["key"].to(pipeline.device)
         num_heads, num_tokens, head_dim = queries.size()
         scale_factor = 1 / math.sqrt(head_dim)
 
