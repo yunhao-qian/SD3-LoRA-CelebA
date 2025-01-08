@@ -58,7 +58,7 @@ In the following NCUT visualization, tokens with high attention weight affinitie
 Clone this Git repository and install the package using pip:
 
 ```bash
-pip install /path/to/sd3-lora-celeba
+pip install /path/to/SD3-LoRA-CelebA
 ```
 
 This will automatically install all dependencies, but you may prefer to install them manually to ensure compatibility with your system. Refer to [`pyproject.toml`](./pyproject.toml) for the complete list of dependencies.
